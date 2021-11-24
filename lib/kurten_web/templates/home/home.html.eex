@@ -1,0 +1,4 @@
+<div class="flex flex-col">
+    <div class="flex content-center text-center bg-gray-50 border-4">Create a room and invite your friends to join</div>
+    <a href="/join" class="bg-red-600"> Create Game</a>
+</div>
