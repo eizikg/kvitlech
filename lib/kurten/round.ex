@@ -11,28 +11,6 @@ defmodule Kurten.Round do
   @round_timeout 60 * 6000
 
   use GenServer
-  @moduledoc """
-    rounds need to be initialized, then turns are created and then finalized and closed.
-
-
-    initialization
-
-    1. create a deck
-    2. keep track of players
-
-
-    playing
-    pick first person from list and create a turn.
-    once a bet happens, determine if won or not and move on to next player accordingly.
-
-
-    runtime constraints
-
-
-    it is a server that holds state.
-
-
-  """
 
   def init(attrs) do
     deck = Deck.new()
@@ -46,20 +24,40 @@ defmodule Kurten.Round do
     {:noreply, Map.put(state, :turns, turns)}
   end
 
+  def handle_cast({:standby, turn}, state) when turn.player.type == "admin" do
+    turn = Map.put(turn, :state, :standby)
+    turns = merge_turn(state.turns, turn)
+    state = Map.put(state, :turns, turns)
+    terminate_game(state)
+  end
+
   def handle_cast({:standby, turn}, state) do
     turn = Map.put(turn, :state, :standby)
-    {:noreply, Map.put(state, :turns, merge_turn(state.turns, turn))}
+    turns = merge_turn(state.turns, turn)
+    next_turn = get_next_turn(turns)
+    {:noreply, Map.merge(state, %{turns: turns, current_player: next_turn.player.id})}
+  end
+
+  def handle_cast({:bet, turn, amount}, state) when turn.player.type == "admin" do
+    [picked_card | rest] = state.deck
+    turn = Map.merge(turn, %{cards: [picked_card | turn.cards], bet: amount, state: Turn.calc_state([picked_card | turn.cards])})
+    turns = merge_turn(state.turns, turn)
+    state = Map.merge(state, %{turns: turns, deck: rest})
+    case turn.state do
+      :pending -> PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: turns, current_player: state.current_player])
+                  {:noreply, state}
+      :won -> terminate_game(state)
+      :lost -> terminate_game(state)
+    end
   end
 
   def handle_cast({:bet, turn, amount}, state) do
     [picked_card | rest] = state.deck
     turn = Map.merge(turn, %{cards: [picked_card | turn.cards], bet: amount, state: Turn.calc_state([picked_card | turn.cards])})
     turns = merge_turn(state.turns, turn)
-    case get_next_turn(turns) do
-      nil -> terminate_game(Map.put(state, :turns, turns))
-      next_turn -> PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: turns, current_player: next_turn.player.id])
-              {:noreply, Map.merge(state, %{turns: turns, current_player: next_turn.player.id, deck: rest})}
-    end
+    next_turn = get_next_turn(turns)
+    PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: turns, current_player: next_turn.player.id])
+    {:noreply, Map.merge(state, %{turns: turns, current_player: next_turn.player.id, deck: rest})}
   end
 
   def handle_call({:leave, player_id}, _from, state) do
@@ -71,10 +69,40 @@ defmodule Kurten.Round do
     {:reply, state, state}
   end
 
+#  terminate game when admin stands or lost.
   def terminate_game(state) do
-    PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", :round_terminated)
-    GenServer.cast(Room.via_tuple(state.room_id), {:round_complete, state.turns})
+    balances = calculate_balances(state.turns)
+    PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", {:round_terminated, state})
+
+    GenServer.cast(Room.via_tuple(state.room_id), {:round_complete, balances})
     Process.exit(self(), :normal)
+  end
+
+  defp calculate_balances(turns) do
+    %{admin: admin_turn, players: player_turns} = Enum.reduce(turns, %{players: []}, fn turn, acc ->
+      if turn.player.type == "admin" do
+        Map.put(acc, :admin, turn)
+      else
+        Map.put(acc, :players, [turn | acc.players])
+      end
+    end)
+    new_balances = Enum.map(player_turns, fn turn ->
+      case turn.state do
+        :lost -> %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
+        :standby -> if player_won?(admin_turn, turn), do: %{amount: turn.bet, payer: admin_turn.player.id, payee: turn.player.id}, else: %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
+        :won -> %{amount: turn.bet, payer: admin_turn.player.id, payee: turn.player.id}
+      end
+    end)
+  end
+
+  defp player_won?(admin_turn, player_turn) do
+    player_total = get_lowest(player_turn.cards)
+    admin_total = get_lowest(admin_turn.cards)
+    player_total > admin_total
+  end
+
+  defp get_lowest(cards) do
+    Turn.get_sums(cards) |> Enum.filter(&(&1 <= 21)) |> Enum.sort(&(&1 > &2)) |> Enum.at(0)
   end
 
   def continue_game(state) do

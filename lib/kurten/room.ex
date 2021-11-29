@@ -55,21 +55,8 @@ defmodule Kurten.Room do
     {:noreply, Map.put(state, :round_id, round_id)}
   end
 
-  def handle_cast({:round_complete, turns}, state) do
-    %{admin: admin_turn, players: player_turns} = Enum.reduce(turns, %{players: []}, fn turn, acc ->
-      if turn.player.type == "admin" do
-        Map.put(acc, :admin, turn)
-        else
-        Map.put(acc, :players, [turn | acc.players])
-      end
-    end)
-    new_balances = Enum.map(player_turns, fn turn ->
-      case turn.state do
-        :lost -> %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
-        :won -> %{amount: turn.bet, payer: admin_turn.player.id, payee: turn.player.id}
-      end
-    end)
-    {:noreply, Map.merge(state, %{balances: new_balances ++ state.balances, round_id: nil})}
+  def handle_cast({:round_complete, balances}, state) do
+    {:noreply, Map.merge(state, %{balances: balances ++ state.balances, round_id: nil})}
   end
 
   def handle_info(:timeout, state) do

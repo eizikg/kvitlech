@@ -10,7 +10,7 @@ defmodule Kurten.Deck do
     %{name: "6", attributes: %{values: [6]}},
     %{name: "7", attributes: %{values: [7]}},
     %{name: "8", attributes: %{values: [8]}},
-    %{name: "9.", attributes: %{values: [9]}},
+    %{name: "9", attributes: %{values: [9]}},
     %{name: "10", attributes: %{values: [10]}},
     %{name: "11", attributes: %{values: [11], type: "rosier"}},
     %{name: "12", attributes: %{values: [12, 9, 10]}}

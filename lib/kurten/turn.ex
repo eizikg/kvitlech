@@ -13,14 +13,18 @@ defmodule Kurten.Turn do
   defstruct [:player, state: :pending, cards: [], bet: 0]
 
   def calc_state(cards) do
-    values = Enum.map(cards, fn card -> card.attributes.values end)
-    sums = calc_sums(values)
+    sums = get_sums(cards)
     cond do
       21 in sums -> :won
       rosier?(cards) -> :won
       Enum.all?(sums, &(&1 > 21)) -> :lost
       true -> :pending
     end
+  end
+
+  def get_sums(cards) do
+    values = Enum.map(cards, fn card -> card.attributes.values end)
+    sums = calc_sums(values)
   end
 
   def initialize(players) do
@@ -34,8 +38,8 @@ defmodule Kurten.Turn do
   end
 
  @doc "calculate all possible sums of cards, since a card can have more than one value"
-  def calc_sums(cards) do
-    Enum.reduce(cards, fn x, acc ->
+  def calc_sums(values) do
+    Enum.reduce(values, fn x, acc ->
       get_combinations(x, acc)
       |> List.flatten
     end)

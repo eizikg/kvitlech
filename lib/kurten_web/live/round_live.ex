@@ -48,7 +48,7 @@ defmodule KurtenWeb.RoundLive do
   def self_view(assigns) do
     cards = Enum.with_index(assigns.player_turn.cards)
     ~H"""
-     <div class="p-3 flex flex-col h-full">
+     <div class="p-3 flex flex-col h-full font-sans">
         <div class="text-center">
           <%= if assigns.player.id == assigns.current_turn.player.id do %>
             <span class="text-blue-800 font-bold	">you</span> are playing
@@ -56,24 +56,30 @@ defmodule KurtenWeb.RoundLive do
              <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
           <% end %>
         </div>
-        <div class="flex-col justify-center align-center h-28">
+        <div class="flex-col justify-center align-center h-full w-full">
           <%= if Enum.at(cards, assigns.selected_card_index) do %>
             <div class="max-w-full">
               <.card card={Enum.at(cards, assigns.selected_card_index)}/>
             </div>
+          <% else %>
+            <div class="flex justify-center items-center w-full h-full">
+              <span class="text-center" >Select amount you'd like to bet.</span>
+            </div>
           <% end %>
           <.card_list cards={cards} selected_card_index={assigns.selected_card_index} />
         </div>
-        <div class="flex justify-center mt-auto">
-          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={0} >$<%= assigns.player_turn.bet %></button>
-          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 5} >+5</button>
-          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 3}>+3</button>
-          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 2}>+2</button>
-          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 1}>+1</button>
+        <div class="flex justify-center mt-auto space-x-1 mb-2">
+          <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={0} >$<%= assigns.player_turn.bet %></button>
+          <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 5} ><span class="text-gray-500">+</span> $5</button>
+          <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 3}><span class="text-gray-500">+</span> $3</button>
+          <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 2}><span class="text-gray-500">+</span> $2</button>
+          <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 1}><span class="text-gray-500">+</span> $1</button>
         </div>
         <div class="flex justify-center align-center space-x-2">
-          <button phx-click="stand" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" > Stand </button>
-          <button phx-click="place_bet" class="0 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet <span class="text-black">$<%= assigns.player_turn.bet + assigns.added_bet %></span></button>
+          <%= if assigns.player_turn.bet > 0 do %>
+          <button phx-click="stand" class="border border-3 border-red-700 bg-white hover:bg-gray-200 text-red-700 font-bold py-2 px-4 rounded" > Stand </button>
+          <% end %>
+          <button disabled={assigns.player_turn.bet + assigns.added_bet == 0} phx-click="place_bet" class="disabled:opacity-50 border border-1 border-green-700 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet <span class="text-black">$<%= assigns.player_turn.bet + assigns.added_bet %></span></button>
         </div>
         <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center">
           <%= for turn <- assigns.turns do %>
@@ -90,7 +96,7 @@ defmodule KurtenWeb.RoundLive do
      <div class="text-center">
      <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
      </div>
-        <div class="flex -space-x-72 overflow-hidden my-1 p-2 h-2/3 w-full">
+        <div class="flex -space-x-72 overflow-hidden my-1 p-2 max-w-full">
           <%= for card <- assigns.current_turn.cards do%>
           <.blank_card card={card}/>
           <% end %>
@@ -107,8 +113,8 @@ defmodule KurtenWeb.RoundLive do
 
   def blank_card(assigns) do
     ~H"""
-    <div class="p-3">
-        <img class="filter max-h-full drop-shadow-xl" src={Routes.static_path(KurtenWeb.Endpoint, "/images/blank.png")} class="w-auto"/>
+    <div class="p-3 flex justify-center">
+        <img class="filter drop-shadow-xl h-auto w-4/5" src={Routes.static_path(KurtenWeb.Endpoint, "/images/blank.png")} class="w-auto"/>
     </div>
     """
   end
@@ -121,7 +127,7 @@ defmodule KurtenWeb.RoundLive do
     ~H"""
     <div class="flex justify-center space-1 items-center ">
      <%= for {card, index} <- assigns.cards do %>
-        <img class="h-12 filter drop-shadow-xl shadow-red-200" src={Routes.static_path(KurtenWeb.Endpoint, "/images/#{card.name}.png")} phx-click="select_card" phx-value-index={index} class="w-auto"/>
+        <img class={"h-12 filter drop-shadow-xl shadow-red-200 #{if assigns.selected_card_index == index, do: "border border-1 rounded border-blue-500"}"} src={Routes.static_path(KurtenWeb.Endpoint, "/images/#{card.name}.png")} phx-click="select_card" phx-value-index={index} class="w-auto"/>
       <% end %>
     </div>
     """
@@ -139,7 +145,7 @@ defmodule KurtenWeb.RoundLive do
         <span class="flex text-red-700 text-center justify-center"><%= "-#{assigns.turn.bet}" %><span>
       <% end %>
       <%= if assigns.turn.state == :pending do %>
-        <span class="flex text-gray-700 text-center justify-center">--<span>
+        <span class="flex text-gray-400	text-center justify-center">--<span>
       <% end %>
       <%= if assigns.turn.state == :won do %>
         <span class="flex text-green-700 text-center justify-center"><%= "#{assigns.turn.bet}" %><span>
@@ -151,8 +157,8 @@ defmodule KurtenWeb.RoundLive do
   def card(assigns) do
     {card, _} = assigns.card
       ~H"""
-      <div class="p-3">
-          <img class="max-w-full filter drop-shadow-xl h-full w-full" src={Routes.static_path(KurtenWeb.Endpoint, "/images/#{card.name}.png")} class="w-auto"/>
+      <div class="p-3 flex justify-center">
+          <img class="filter drop-shadow-xl h-auto w-4/5" src={Routes.static_path(KurtenWeb.Endpoint, "/images/#{card.name}.png")} class="w-auto"/>
       </div>
       """
   end
@@ -164,16 +170,16 @@ defmodule KurtenWeb.RoundLive do
   end
 
   def handle_event("stand", _params, socket) do
-    player_turn = player_turn(socket.assigns.round.turns, socket.assings.player)
+    player_turn = player_turn(socket.assigns.round.turns, socket.assigns.player)
     Round.stand(socket.assigns.round.round_id, player_turn)
+    {:noreply, socket}
   end
 
   defp player_turn(turns, player) do
     Enum.find(turns, &(&1.player.id == player.id))
   end
 
-
-  def handle_info(:round_terminated, socket) do
+  def handle_info({:round_terminated, state}, socket) do
     {:noreply, push_redirect(socket, to: "/room")}
   end
 
