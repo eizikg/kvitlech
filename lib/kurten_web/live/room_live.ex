@@ -56,8 +56,8 @@ defmodule KurtenWeb.RoomLive do
           <% end %>
        </div>
        <div x-data="{copied: false}" class="flex justify-center mt-auto mb-6">
-            <input disabled value={"#{Routes.url(KurtenWeb.Endpoint)}/join/#{@room.room_id}"} class="bg-gray-100 text-gray-600 flex-1 py-2 px-4 rounded-l-lg border-l-1 border-t-1 border-b-1 overflow-clip	"/>
-            <button class="bg-gray-300 text-gray-800 font-bold py-2 px-4 w-min-content rounded-r-lg inline-flex" id="copy_invite" type="button" @click={"copied = true; $clipboard('#{Routes.url(KurtenWeb.Endpoint)}/join/#{@room.room_id}')"}>
+            <input disabled value={"#{url()}/join/#{@room.room_id}"} class="bg-gray-100 text-gray-600 flex-1 py-2 px-4 rounded-l-lg border-l-1 border-t-1 border-b-1 overflow-clip	"/>
+            <button class="bg-gray-300 text-gray-800 font-bold py-2 px-4 w-min-content rounded-r-lg inline-flex" id="copy_invite" type="button" @click={"copied = true; $clipboard('#{url()}/join/#{@room.room_id}')"}>
                 <span x-show="!copied">Copy</span>
                 <span x-show="copied">Copied!</span>
                 <svg x-show="copied" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -74,6 +74,10 @@ defmodule KurtenWeb.RoomLive do
     </div>
   </div>
 """
+  end
+
+  def url do
+    System.get_env("BASE_URL") || "http://localhost:4000"
   end
 
   def avatar(assigns) do
