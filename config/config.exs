@@ -21,6 +21,7 @@ config :esbuild,
 # Configures the endpoint
 config :kurten, KurtenWeb.Endpoint,
   url: [host: "localhost"],
+  check_origin: false,
   secret_key_base: "QIMcQV+qRpo0iY66gL/XbBVqdS5G+F6h5a9PrivNOd8SrzsePPNdn7/Q0pp2Rll+",
   render_errors: [view: KurtenWeb.ErrorView, accepts: ~w(html json), layout: false],
   pubsub_server: Kurten.PubSub,
