@@ -3,7 +3,7 @@
     "deploy": "cd .. && mix assets.deploy && rm -f _build/esbuild"
   },
   "dependencies": {
-    "@ryangjchandler/alpine-clipboard": "^2.1.0",
+    "@ryangjchandler/alpine-clipboard": "2.1.0",
     "alpinejs": "3.2.2",
     "phoenix_live_view": "file:../deps/phoenix_live_view",
     "topbar": "^1.0.1"
