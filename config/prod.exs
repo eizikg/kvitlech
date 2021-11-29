@@ -10,7 +10,7 @@ use Mix.Config
 # which you should run after static files are built and
 # before starting your production server.
 config :kurten, KurtenWeb.Endpoint,
-  url: [host: System.get_env("BASE_URL"), port: System.get_env("PORT")],
+  url: [host: System.get_env("BASE_URL")],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Do not print debug messages in production
