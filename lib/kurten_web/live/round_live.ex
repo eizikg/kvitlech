@@ -103,10 +103,9 @@ defmodule KurtenWeb.RoundLive do
 
   def blank_card(assigns) do
     ~H"""
-      <div class="p-3 h-full w-full">
-        <div class="rounded-lg card bg-black h-full w-full relative border border-1 rounded">
-        </div>
-      </div>
+    <div class="p-3">
+        <img class="h-full filter drop-shadow-xl" src={Routes.static_path(KurtenWeb.Endpoint, "/images/blank.png")} class="w-auto"/>
+    </div>
     """
   end
 
