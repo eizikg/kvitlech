@@ -3,48 +3,179 @@ defmodule KurtenWeb.RoundLive do
   alias Kurten.Round
   alias Phoenix.PubSub
   alias Kurten.Room
+  alias KurtenWeb.Presence
   @moduledoc """
   round keeps track of the round and shows who is playing.
   when the person is playing, shows a different UI
+
+  states
+
+  current_turn. automatically updated when new turn starts
+  view_mode "self", "current_player". set by user but updated by system when turn changes
+  selected_card_index. index of card being viewed. changes when user clicks on other own card.
+          automatically updated to 0 when turn changes
+          changes to new card when player bets.
+          if a players turn has changed, the last card will slide in
+
+
 """
 
   @impl true
   def mount(_params, session, socket) do
     {:ok, room, player} = Room.get_info_for_player(session["room_id"], session["player_id"])
     PubSub.subscribe(Kurten.PubSub, "round:#{room.round_id}")
+    Presence.track(self(), "presence:#{session["room_id"]}", session["player_id"], %{})
     {:ok, round} = Round.get_info(room.round_id)
-    players = Enum.filter(room.players, fn player -> player.id in round.players end)
-    {:ok, assign(socket, players: players, turns: round.turns, cards: round.deck)}
+#
+#     player = %{id: 2}
+#     round = %{round_id: 200, turns: [%{player: %{id: 1, first_name: "eizik", last_name: "gottesfeld"}, bet: 5, state: :lost, cards: [%{name: 12, attributes: %{type: "rosier"}}, %{name: 10, attributes: %{}}]}, %{player: %{id: 2, first_name: "eizik", last_name: "gottesfeld"}, bet: 10, state: :lost, cards: [%{name: 11, attributes: %{type: "rosier"}}]}], current_player: 1}
+    {:ok, assign(socket, [round: round, player: player, view_mode: "current_player", selected_card_index: 0, added_bet: 0])}
   end
 
   def render(assigns) do
-    ~H"""
-  <div class="flex -space-x-2 overflow-hidden">
-    <%= for player <- @players do %>
-      <img class="inline-block h-10 w-10 rounded-full ring-2 ring-white">
-    <% end %>
-  </div>
-  <%= for card <- @cards do %>
-            <.card card={card}/>
-        <% end %>
-"""
-  end
-
-  def card(assigns) do
-    IO.inspect(assigns.card[:type])
-    if assigns.card.attributes[:type] == "rosier" do
-      ~H"""
-      <img src={Routes.static_path(KurtenWeb.Endpoint, "/images/rosier_card.png")}/>
-      """
+    %{round: round, player: player, view_mode: view_mode, selected_card_index: selected_card_index, added_bet: added_bet} = assigns
+    player_turn = Enum.find(round.turns, &(&1.player.id == player.id))
+    current_turn = Enum.find(round.turns, &(&1.player.id == round.current_player))
+    params = %{current_turn: current_turn, added_bet: added_bet, turns: round.turns, current_player: round.current_player, player: player, selected_card_index: selected_card_index, player_turn: player_turn, round_id: round.round_id}
+    if view_mode == "self" or player_turn.player.id == round.current_player do
+      self_view(params)
     else
-      ~H"""
-  <div><%= assigns.card.name %></div>
-"""
+      other_view(params)
     end
   end
 
-#  handle updates from round
-  def handle_info(round, socket) do
-    {:noreply, assign(socket, round)}
+
+  def self_view(assigns) do
+    cards = Enum.with_index(assigns.player_turn.cards)
+    ~H"""
+     <div class="p-3 flex flex-col h-full">
+        <div class="text-center">
+          <%= if assigns.player.id == assigns.current_turn.player.id do %>
+            <span class="text-blue-800 font-bold	">you</span> are playing
+            <% else %>
+             <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
+          <% end %>
+        </div>
+        <div class="flex-col justify-center align-center h-2/3">
+          <%= if Enum.at(cards, assigns.selected_card_index) do %><.card card={Enum.at(cards, assigns.selected_card_index)}/><% end %>
+          <.card_list cards={cards} selected_card_index={assigns.selected_card_index} />
+        </div>
+        <div class="flex justify-center mt-auto">
+          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={0} >$<%= assigns.player_turn.bet %></button>
+          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 5} >+5</button>
+          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 3}>+3</button>
+          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300"phx-click="bet_amount" phx-value-amount={assigns.added_bet + 2}>+2</button>
+          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 1}>+1</button>
+        </div>
+        <div class="flex justify-center align-center space-x-2">
+          <button phx-click="stand" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded" > Stand </button>
+          <button phx-click="place_bet" class="0 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet <span class="text-black">$<%= assigns.player_turn.bet + assigns.added_bet %></span></button>
+        </div>
+        <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center">
+          <%= for turn <- assigns.turns do %>
+            <.avatar turn={turn}/>
+          <% end %>
+        </div>
+      </div>
+    """
+  end
+
+  def other_view(assigns) do
+    ~H"""
+     <div class="p-3 flex flex-col h-full">
+     <div class="text-center">
+     <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
+     </div>
+        <div class="flex -space-x-72 overflow-hidden my-1 p-2 h-2/3 w-full">
+          <%= for card <- assigns.current_turn.cards do%>
+          <.blank_card card={card}/>
+          <% end %>
+        </div>
+        <div class="text-center">$<%= assigns.current_turn.bet %></div>
+        <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center mt-auto">
+          <%= for turn <- assigns.turns do %>
+            <.avatar turn={turn}/>
+          <% end %>
+        </div>
+      </div>
+    """
+  end
+
+  def blank_card(assigns) do
+    ~H"""
+      <div class="p-3 h-full w-full">
+        <div class="rounded-lg card bg-black h-full w-full relative border border-1 rounded">
+        </div>
+      </div>
+    """
+  end
+
+  def handle_event("bet_amount", %{"amount" => amount}, socket) do
+    {:noreply, assign(socket, added_bet: String.to_integer(amount))}
+  end
+
+  def card_list(assigns) do
+    ~H"""
+    <div class="flex justify-center space-1 items-center ">
+     <%= for {card, index} <- assigns.cards do %>
+        <img class="h-12 filter drop-shadow-xl shadow-red-200" src={Routes.static_path(KurtenWeb.Endpoint, "/images/#{card.name}.png")} phx-click="select_card" phx-value-index={index} class="w-auto"/>
+      <% end %>
+    </div>
+    """
+  end
+
+  def handle_event("select_card", %{"index" => index}, socket) do
+    {:noreply, assign(socket, :selected_card_index, String.to_integer(index))}
+  end
+
+  def avatar(assigns) do
+    ~H"""
+      <div >
+     <div class="inline-block h-10 w-10 rounded-full ring-2 ring-black items-center bg-white flex justify-center"><%= "#{String.at(assigns.turn.player.first_name, 0) |> String.upcase}#{String.at(assigns.turn.player.last_name, 0) |> String.upcase}" %></div>
+      <%= if assigns.turn.state == :lost do %>
+        <span class="flex text-red-700 text-center justify-center"><%= "-#{assigns.turn.bet}" %><span>
+      <% end %>
+      <%= if assigns.turn.state == :pending do %>
+        <span class="flex text-gray-700 text-center justify-center">--<span>
+      <% end %>
+      <%= if assigns.turn.state == :won do %>
+        <span class="flex text-green-700 text-center justify-center"><%= "#{assigns.turn.bet}" %><span>
+      <% end %>
+    </div>
+    """
+  end
+
+  def card(assigns) do
+    {card, _} = assigns.card
+      ~H"""
+      <div class="p-3">
+          <img class="h-full filter drop-shadow-xl" src={Routes.static_path(KurtenWeb.Endpoint, "/images/#{card.name}.png")} class="w-auto"/>
+      </div>
+      """
+  end
+
+  def handle_event("place_bet", params, socket) do
+    player_turn = player_turn(socket.assigns.round.turns, socket.assigns.player)
+    Round.place_bet(socket.assigns.round.round_id, player_turn, player_turn.bet + socket.assigns.added_bet)
+    {:noreply, socket}
+  end
+
+  def handle_event("stand", _params, socket) do
+    player_turn = player_turn(socket.assigns.round.turns, socket.assings.player)
+    Round.stand(socket.assigns.round.round_id, player_turn)
+  end
+
+  defp player_turn(turns, player) do
+    Enum.find(turns, &(&1.player.id == player.id))
+  end
+
+
+  def handle_info(:round_terminated, socket) do
+    {:noreply, push_redirect(socket, to: "/room")}
+  end
+
+  #  handle updates from round
+  def handle_info([turns: turns, current_player: current_player], socket) do
+    {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, current_player: current_player, added_bet: 0}))}
   end
 end

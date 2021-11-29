@@ -1,24 +1,44 @@
 defmodule Kurten.Room do
   alias Phoenix.PubSub
   alias Kurten.Round
+  alias Kurten.Room
 
   use GenServer
+
+  defstruct [:admin, :room_id, :round_id, balances: [],  players: []]
 
   @moduledoc """
   rooms have players
 """
 
+ # room should close itself if inactive for 2 hours
+ @round_timeout 120 * 6000
+
   def init(args) do
-    {:ok, %{players: [args[:admin]], room_id: args[:room_id]}}
+    Phoenix.PubSub.subscribe(Kurten.PubSub, "presence:#{args[:room_id]}")
+    {:ok, %Room{players: [args[:admin]], room_id: args[:room_id], balances: []}}
   end
 
   def start_link(options) do
     GenServer.start_link(__MODULE__, Keyword.take(options, [:admin, :room_id]), options)
   end
 
+  def handle_info(%{event: presence_state, payload: diff}, state) do
+    %{joins: joins, leaves: leaves} = diff
+    players = Enum.map(state.players, fn player ->
+      cond do
+        Map.has_key?(joins, player.id) -> Map.put(player, :presence, "online")
+        Map.has_key?(leaves, player.id) -> Map.put(player, :presence, "offline")
+        true -> player
+      end
+    end)
+    {:noreply, Map.put(state, :players, players)}
+  end
+
   def handle_call({:join, player}, _from, state) do
-    state = Map.put(state, :players, [player | state.players])
-    PubSub.broadcast(Kurten.PubSub, "room:#{state.room_id}", {:player_joined, player})
+    players = [player | state.players]
+    state = Map.put(state, :players, players)
+    PubSub.broadcast(Kurten.PubSub, "room:#{state.room_id}", [players: players])
     {:reply, state, state}
   end
 
@@ -28,11 +48,35 @@ defmodule Kurten.Room do
 
   def handle_cast(:create_round, state) do
     round_id = UUID.uuid1()
+    room_id = state.room_id
     via_tuple = {:via, Registry, {Kurten.RoundRegistry, round_id}}
-    {:ok, _pid} = GenServer.start_link(Round, [players: Enum.map(state.players, &(&1.id)), round_id: round_id], name: via_tuple)
+    {:ok, _pid} = GenServer.start_link(Round, [players: state.players, round_id: round_id, room_id: state.room_id], name: via_tuple)
     PubSub.broadcast(Kurten.PubSub, "room:#{state.room_id}", :round_started)
     {:noreply, Map.put(state, :round_id, round_id)}
   end
+
+  def handle_cast({:round_complete, turns}, state) do
+    %{admin: admin_turn, players: player_turns} = Enum.reduce(turns, %{players: []}, fn turn, acc ->
+      if turn.player.type == "admin" do
+        Map.put(acc, :admin, turn)
+        else
+        Map.put(acc, :players, [turn | acc.players])
+      end
+    end)
+    new_balances = Enum.map(player_turns, fn turn ->
+      case turn.state do
+        :lost -> %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
+        :won -> %{amount: turn.bet, payer: admin_turn.player.id, payee: turn.player.id}
+      end
+    end)
+    {:noreply, Map.merge(state, %{balances: new_balances ++ state.balances, round_id: nil})}
+  end
+
+  def handle_info(:timeout, state) do
+    Process.exit(self())
+  end
+
+
 #  client
 
   def create_room(admin) do
@@ -41,7 +85,7 @@ defmodule Kurten.Room do
     {:ok, room_id}
   end
 
-  defp via_tuple(name) do
+  def via_tuple(name) do
     {:via, Registry, {Kurten.RoomRegistry, name}}
   end
 

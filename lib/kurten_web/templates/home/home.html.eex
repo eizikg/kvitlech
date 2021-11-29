@@ -1,4 +1,4 @@
-<div class="flex flex-col">
-    <div class="flex content-center text-center bg-gray-50 border-4">Create a room and invite your friends to join</div>
-    <a href="/join" class="bg-red-600"> Create Game</a>
+<div class="flex flex-col mt-auto h-2/3">
+    <div class="flex mt-auto content-center text-center p-28">Create a room and invite your friends to join</div>
+    <%= button("Create Game", to: "/join", class: "bg-blue-400 rounded m-4", method: "get") %>
 </div>

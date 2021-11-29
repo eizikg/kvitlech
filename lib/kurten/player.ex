@@ -6,16 +6,18 @@ defmodule Kurten.Player do
   @primary_key false
 
   embedded_schema do
-    field :name, :string
+    field :first_name, :string
+    field :last_name, :string
     field :room_id, :string
     field :id, :string
+    field :presence, :string, default: "offline"
     field :type, :string, default: "player"
   end
 
   def changeset(params) do
    %__MODULE__{}
-   |> cast(params, [:name, :type])
-   |> validate_required([:name])
+   |> cast(params, [:first_name, :last_name, :type])
+   |> validate_required([:first_name, :last_name])
    |> generate_uuid
   end
 

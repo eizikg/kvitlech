@@ -1,11 +1,19 @@
-<main role="main" class="container">
-  <p class="alert alert-info" role="alert"
+<main role="main" class="h-full">
+<p class="alert alert-info" role="alert"
     phx-click="lv:clear-flash"
     phx-value-key="info"><%= live_flash(@flash, :info) %></p>
 
   <p class="alert alert-danger" role="alert"
     phx-click="lv:clear-flash"
     phx-value-key="error"><%= live_flash(@flash, :error) %></p>
-
-  <%= @inner_content %>
+    <div class="h-screen flex flex-col">
+    <header class="flex justify-center text-4xl text-center border-b-2 h-16">
+      <div class="p-1 bg-gray-100 w-full rounded">
+        <span class="text-blue-800 text-center text-base" style="font-family: Open Sans">online</span><span class="text-5xl" style="font-family: 'Suez One'">קוויטלעך</span>
+      </div>
+    </header>
+    <div class="flex-1">
+    <%= @inner_content %>
+    </div>
+  </div>
 </main>

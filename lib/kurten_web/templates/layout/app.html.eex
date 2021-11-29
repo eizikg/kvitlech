@@ -1,5 +1,11 @@
-<main role="main" class="container">
+<main role="main" class="h-full">
   <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
   <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
-  <%= @inner_content %>
+  <header class="flex justify-center text-4xl text-center border-b-2 h-16">
+        <div class="p-1 bg-gray-100 w-full rounded">
+          <span class="text-blue-800 text-center text-base" style="font-family: Open Sans">online</span><span class="text-5xl" style="font-family: 'Suez One'">קוויטלעך</span>
+        </div>
+      </header>
+      <%= @inner_content %>
+    </div>
 </main>

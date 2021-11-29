@@ -1,13 +1,16 @@
 defmodule Kurten.Turn do
 
+  alias Kurten.Turn
+
 
   @module_doc """
   possible states for a turn
   1. pending. player can still choose another card
   2. lost
   3. won
+  4. standby
 """
-  defstruct [:player, :bet, state: :pending, cards: []]
+  defstruct [:player, state: :pending, cards: [], bet: 0]
 
   def calc_state(cards) do
     values = Enum.map(cards, fn card -> card.attributes.values end)
@@ -17,6 +20,12 @@ defmodule Kurten.Turn do
       rosier?(cards) -> :won
       Enum.all?(sums, &(&1 > 21)) -> :lost
       true -> :pending
+    end
+  end
+
+  def initialize(players) do
+    for player <- players do
+      %Turn{player: player}
     end
   end
 

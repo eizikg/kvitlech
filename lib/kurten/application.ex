@@ -16,6 +16,7 @@ defmodule Kurten.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: Kurten.PubSub},
       # Start the Endpoint (http/https)
+      KurtenWeb.Presence,
       KurtenWeb.Endpoint,
       # supervisor for rounds
       {DynamicSupervisor, strategy: :one_for_one, name: Kurten.RoundSupervisor},

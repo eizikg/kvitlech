@@ -1,15 +1,18 @@
-<%= if @room[:admin] do %>
-  <%= @room.admin.name %> invited you to join the room
+<%= if not is_nil(@room) do %>
+  <%= Enum.find(@room.players, &(&1.type == :admin)) %> invited you to join the room
 <% end %>
 
-<%= form_for @changeset, (if is_nil(@room[:room_id]),  do: Routes.player_path(KurtenWeb.Endpoint, :create), else: Routes.player_path(KurtenWeb.Endpoint, :join, @room.room_id)) , fn f -> %>
-    <div class="bg-grey-lighter min-h-screen flex flex-col">
-                <div class="container max-w-sm mx-auto flex-1 flex flex-col items-center justify-center px-2">
-                    <div class="bg-white px-6 py-8 rounded shadow-md text-black w-full">
+<%= form_for @changeset, (if is_nil(@room),  do: Routes.player_path(KurtenWeb.Endpoint, :create), else: Routes.player_path(KurtenWeb.Endpoint, :join, @room.room_id)) , fn f -> %>
+    <div class="bg-grey-lighter flex flex-col">
+                <div class=" flex flex-col items-center justify-center px-2">
+                    <div class="bg-white px-6 py-8 text-black w-full">
+                        <%= if is_nil(@room) do %>
                         <h1 class="mb-8 text-3xl text-center">Create a game</h1>
-                        <%= text_input f, :name, [class: "block border border-grey-light w-full p-3 rounded mb-4", placeholder: "Full Name"] %>
+                       <% end %>
+                        <%= text_input f, :first_name, [class: "block border border-grey-light w-full p-3 rounded mb-4", placeholder: "First Name", required: true] %>
+                        <%= text_input f, :last_name, [class: "block border border-grey-light w-full p-3 rounded mb-4", placeholder: "Last Name", required: true] %>
 
-                        <%= submit "Submit", [class: "w-full text-center py-3 rounded bg-green text-white hover:bg-green-dark focus:outline-none my-1"]%>
+                        <%= submit "Submit", [class: "w-full text-center py-3 rounded bg-blue-700 text-white hover:bg-green-dark focus:outline-none my-1"]%>
                     </div>
                 </div>
     </div>

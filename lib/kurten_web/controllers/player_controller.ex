@@ -14,7 +14,7 @@ defmodule KurtenWeb.PlayerController do
 
   def new(conn, _params) do
     changeset = Player.changeset(%{})
-    render(conn, "new.html", [changeset: changeset, room: %{}])
+    render(conn, "new.html", [changeset: changeset, room: nil])
   end
 
 #  create new room
@@ -28,7 +28,6 @@ defmodule KurtenWeb.PlayerController do
 
 #  join existing room
   def join(conn, %{"player" => player} = params) do
-    IO.inspect(player)
     {:ok, room, player} = Player.create(player, params["room_id"])
     conn
     |> put_session(:player_id, player.id)
