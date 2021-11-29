@@ -56,15 +56,19 @@ defmodule KurtenWeb.RoundLive do
              <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
           <% end %>
         </div>
-        <div class="flex-col justify-center align-center h-2/3">
-          <%= if Enum.at(cards, assigns.selected_card_index) do %><.card card={Enum.at(cards, assigns.selected_card_index)}/><% end %>
+        <div class="flex-col justify-center align-center h-28">
+          <%= if Enum.at(cards, assigns.selected_card_index) do %>
+            <div class="max-w-full">
+              <.card card={Enum.at(cards, assigns.selected_card_index)}/>
+            </div>
+          <% end %>
           <.card_list cards={cards} selected_card_index={assigns.selected_card_index} />
         </div>
         <div class="flex justify-center mt-auto">
           <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={0} >$<%= assigns.player_turn.bet %></button>
           <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 5} >+5</button>
           <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 3}>+3</button>
-          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300"phx-click="bet_amount" phx-value-amount={assigns.added_bet + 2}>+2</button>
+          <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 2}>+2</button>
           <button class="rounded m-1 px-2  border border-1 border-black bg-gray-300" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 1}>+1</button>
         </div>
         <div class="flex justify-center align-center space-x-2">
@@ -104,7 +108,7 @@ defmodule KurtenWeb.RoundLive do
   def blank_card(assigns) do
     ~H"""
     <div class="p-3">
-        <img class="h-full filter drop-shadow-xl" src={Routes.static_path(KurtenWeb.Endpoint, "/images/blank.png")} class="w-auto"/>
+        <img class="filter max-h-full drop-shadow-xl" src={Routes.static_path(KurtenWeb.Endpoint, "/images/blank.png")} class="w-auto"/>
     </div>
     """
   end
@@ -148,7 +152,7 @@ defmodule KurtenWeb.RoundLive do
     {card, _} = assigns.card
       ~H"""
       <div class="p-3">
-          <img class="h-full filter drop-shadow-xl" src={Routes.static_path(KurtenWeb.Endpoint, "/images/#{card.name}.png")} class="w-auto"/>
+          <img class="max-w-full filter drop-shadow-xl h-full w-full" src={Routes.static_path(KurtenWeb.Endpoint, "/images/#{card.name}.png")} class="w-auto"/>
       </div>
       """
   end
