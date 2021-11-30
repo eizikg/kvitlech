@@ -61,7 +61,7 @@ defmodule KurtenWeb.RoomLive do
                 </a>
           </div>
          <div x-data="{copied: false}" class="flex justify-center">
-              <input disabled value={"#{url(@room.room_id)}"} class="bg-gray-100 text-gray-600 flex-1 py-2 px-4 rounded-l-lg border-l-1 border-t-1 border-b-1 overflow-clip	"/>
+              <input value={"#{url(@room.room_id)}"} class="bg-gray-100 text-gray-600 flex-1 py-2 px-4 rounded-l-lg border-l-1 border-t-1 border-b-1 overflow-clip	"/>
               <button class="bg-gray-300 text-gray-800 font-bold py-2 px-4 w-min-content rounded-r-lg inline-flex" id="copy_invite" type="button" @click={"copied = true; $clipboard('#{url(@room.room_id)}')"}>
                   <span x-show="!copied">Copy</span>
                   <span x-show="copied">Copied!</span>
@@ -75,7 +75,7 @@ defmodule KurtenWeb.RoomLive do
        <%= if not is_nil(@room.round_id) do %>
        <button class="btn-blue" phx-click="join_round">Join round in progress</button>
        <%end%>
-       <%= if @player.type == "admin" and length(@room.players) > 1 do%>
+       <%= if @player.type == "admin" and length(@room.players) > 1 and is_nil(@room.round_id) do%>
           <button class="btn-blue" phx-click="start_round">Start Round</button>
         <% end %>
     </div>

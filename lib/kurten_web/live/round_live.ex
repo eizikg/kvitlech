@@ -58,7 +58,7 @@ defmodule KurtenWeb.RoundLive do
         </div>
         <div class="text-center">
           <%= if assigns.player_turn.state == :won do %>
-            <span class="text-blue-800 font-bold	">You won! 🎉</span>
+            <span x-data x-init="confetti()" class="text-blue-800 font-bold	">You won! 🎉</span>
           <% end %>
           <%= if assigns.player_turn.state == :lost do %>
             <span class="text-blue-800 font-bold	">You lost 🙁</span>
