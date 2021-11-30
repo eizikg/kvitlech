@@ -55,23 +55,28 @@ defmodule KurtenWeb.RoundLive do
              <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
           <% end %>
         </div>
-        <div class="text-center">
-          <%= if assigns.player_turn.state == :won do %>
-            <span x-data x-init="confetti()" class="text-blue-800 font-bold	">You won! 🎉</span>
-          <% end %>
-          <%= if assigns.player_turn.state == :lost do %>
-            <span class="text-blue-800 font-bold	">You lost 🙁</span>
-          <% end %>
-        </div>
-        <div class="flex-col justify-center align-center h-full w-full">
+        <div class="flex-col justify-center relative align-center h-full w-full">
+          <div class="absolute top-1/2 text-center font-bold animate-pulse w-full font-bold text-6xl z-50">
+              <%= if assigns.player_turn.state == :won do %>
+                <span x-data x-init="confetti()" class="text-green-700">You won! 🎉</span>
+              <% end %>
+              <%= if assigns.player_turn.state == :lost do %>
+                <span class="text-red-600 z-50">You lost 🙁</span>
+              <% end %>
+              <%= if assigns.player_turn.state == :standby do %>
+                <span class="text-gray-600 z-50">Standing</span>
+              <% end %>
+           </div>
           <%= if Enum.at(cards, assigns.selected_card_index) do %>
-            <div class="max-w-full">
-              <.card card={Enum.at(cards, assigns.selected_card_index)}/>
-            </div>
+          <div class="max-w-full">
+            <.card card={Enum.at(cards, assigns.selected_card_index)}/>
+          </div>
           <% else %>
-            <div class="flex justify-center items-center w-full h-full">
-              <span class="text-center" >Select amount you'd like to bet.</span>
-            </div>
+            <%= if assigns.player.type != "admin" do %>
+              <div class="flex justify-center items-center w-full h-full">
+                <span class="text-center" >Select amount you'd like to bet.</span>
+              </div>
+            <% end %>
           <% end %>
           <.card_list cards={cards} selected_card_index={assigns.selected_card_index} />
         </div>
@@ -85,13 +90,13 @@ defmodule KurtenWeb.RoundLive do
           </div>
         <% end %>
         <div class="flex justify-center align-center space-x-2">
-          <%= if length(assigns.current_turn.cards) > 0 do %>
+          <%= if length(assigns.current_turn.cards) > 0 && assigns.player_turn.state == :pending do %>
           <button phx-click="stand" class="border border-3 border-red-700 bg-white hover:bg-gray-200 text-red-700 font-bold py-2 px-4 rounded" > Stand </button>
           <% end %>
           <button disabled={(assigns.player_turn.bet + assigns.added_bet == 0 and assigns.player.type != "admin") || assigns.player_turn.state != :pending} phx-click="place_bet" class="disabled:opacity-50 border border-1 border-green-700 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet <%= if assigns.player.type != "admin" do %>
           <span class="text-black">$<%= assigns.player_turn.bet + assigns.added_bet %></span>
           <% end %>
-</button>
+        </button>
         </div>
         <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center">
           <%= for turn <- assigns.turns do %>
@@ -105,29 +110,34 @@ defmodule KurtenWeb.RoundLive do
   def other_view(assigns) do
     ~H"""
      <div class="p-3 flex flex-col h-full">
-     <div class="text-center">
-     <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
-     </div>
     <div class="text-center">
-        <%= if assigns.current_turn.state == :won do %>
-          <span class="text-blue-800 font-bold	">won! 🎉</span>
-        <% end %>
-        <%= if assigns.current_turn.state == :lost do %>
-          <span class="text-blue-800 font-bold	">Lost 🙁</span>
-        <% end %>
+      <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
+    </div>
+    <div class="flex relative overflow-hidden my-1 p-2 max-w-full">
+      <div class="flex -space-x-72">
+      <%= for card <- assigns.current_turn.cards do%>
+      <.blank_card card={card}/>
+      <% end %>
       </div>
-        <div class="flex -space-x-72 overflow-hidden my-1 p-2 max-w-full">
-          <%= for card <- assigns.current_turn.cards do%>
-          <.blank_card card={card}/>
+      <div class="absolute top-1/2 text-center font-bold animate-pulse w-full font-bold text-6xl z-50">
+          <%= if assigns.current_turn.state == :won do %>
+            <span x-data class="text-green-700">Won</span>
           <% end %>
-        </div>
-        <div class="text-center">$<%= assigns.current_turn.bet %></div>
-        <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center mt-auto">
-          <%= for turn <- assigns.turns do %>
-            <.avatar turn={turn}/>
+          <%= if assigns.current_turn.state == :lost do %>
+            <span class="text-red-600 z-50">Lost</span>
           <% end %>
-        </div>
-      </div>
+          <%= if assigns.current_turn.state == :standby do %>
+            <span class="text-gray-600 z-50">Standing</span>
+          <% end %>
+       </div>
+    </div>
+    <div class="text-center">$<%= assigns.current_turn.bet %></div>
+    <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center mt-auto">
+      <%= for turn <- assigns.turns do %>
+      <.avatar turn={turn}/>
+      <% end %>
+    </div>
+    </div>
     """
   end
 

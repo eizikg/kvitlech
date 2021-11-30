@@ -95,9 +95,9 @@ defmodule KurtenWeb.RoomLive do
     user_balances = Enum.filter(assigns.balances, fn balance -> balance.payee == assigns.player.id or balance.payer == assigns.player.id end)
     balance = Enum.reduce(user_balances, 0, fn balance, acc ->
       if balance.payee == assigns.player.id do
-        acc - balance.amount
-        else
         acc + balance.amount
+        else
+        acc - balance.amount
       end
     end)
     ~H"""

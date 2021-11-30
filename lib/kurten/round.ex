@@ -92,28 +92,26 @@ defmodule Kurten.Round do
     new_balances = Enum.map(player_turns, fn turn ->
       case turn.state do
         :lost -> %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
-        :standby -> if player_won?(admin_turn, turn), do: %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}, else: %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
+        :standby -> if player_won?(admin_turn, turn), do: %{amount: turn.bet, payer: admin_turn.player.id, payee: turn.player.id}, else: %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
         :won -> %{amount: turn.bet, payer: admin_turn.player.id, payee: turn.player.id}
       end
     end)
   end
 
   defp player_won?(admin_turn, player_turn) do
-    player_total = get_lowest(player_turn.cards)
-    admin_total = get_lowest(admin_turn.cards)
+    player_total = get_winning_number(player_turn.cards)
+    admin_total = get_winning_number(admin_turn.cards)
     player_total > admin_total
   end
 
-  defp get_lowest(cards) do
+  def get_winning_number(cards) do
     Turn.get_sums(cards) |> Enum.filter(&(&1 <= 21)) |> Enum.sort(&(&1 > &2)) |> Enum.at(0)
-  end
-
-  def continue_game(state) do
   end
 
   @spec get_next_turn(any()) :: nil | any()
   defp get_next_turn(turns) do
     pending_turns = Enum.filter(turns, &(&1.state == :pending))
+    standing_turns = Enum.filter(turns, &(&1.state == :standby))
     if length(pending_turns) == 1 do
       #      only the admin remains
       hd(pending_turns)
