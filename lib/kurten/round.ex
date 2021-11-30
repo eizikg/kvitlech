@@ -36,7 +36,9 @@ defmodule Kurten.Round do
     turn = Map.put(turn, :state, :standby)
     turns = merge_turn(state.turns, turn)
     next_turn = get_next_turn(turns)
-    {:noreply, Map.merge(state, %{turns: turns, current_player: next_turn.player.id})}
+    state = Map.merge(state, %{turns: turns, current_player: next_turn.player.id})
+    PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: state.turns, current_player: state.current_player])
+    {:noreply, state}
   end
 
   def handle_cast({:bet, turn, amount}, state) when turn.player.type == "admin" do
@@ -90,7 +92,7 @@ defmodule Kurten.Round do
     new_balances = Enum.map(player_turns, fn turn ->
       case turn.state do
         :lost -> %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
-        :standby -> if player_won?(admin_turn, turn), do: %{amount: turn.bet, payer: admin_turn.player.id, payee: turn.player.id}, else: %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
+        :standby -> if player_won?(admin_turn, turn), do: %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}, else: %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
         :won -> %{amount: turn.bet, payer: admin_turn.player.id, payee: turn.player.id}
       end
     end)

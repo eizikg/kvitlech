@@ -76,18 +76,23 @@ defmodule KurtenWeb.RoundLive do
           <% end %>
           <.card_list cards={cards} selected_card_index={assigns.selected_card_index} />
         </div>
-        <div class="flex justify-center mt-auto space-x-1 mb-2">
-          <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={0} >$<%= assigns.player_turn.bet %></button>
-          <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 5} ><span class="text-gray-500">+</span> $5</button>
-          <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 3}><span class="text-gray-500">+</span> $3</button>
-          <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 2}><span class="text-gray-500">+</span> $2</button>
-          <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 1}><span class="text-gray-500">+</span> $1</button>
-        </div>
+        <%= if assigns.player.type != "admin" do %>
+          <div class="flex justify-center mt-auto space-x-1 mb-2">
+            <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={0} >$<%= assigns.player_turn.bet %></button>
+            <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 5} ><span class="text-gray-500">+</span> $5</button>
+            <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 3}><span class="text-gray-500">+</span> $3</button>
+            <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 2}><span class="text-gray-500">+</span> $2</button>
+            <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 1}><span class="text-gray-500">+</span> $1</button>
+          </div>
+        <% end %>
         <div class="flex justify-center align-center space-x-2">
           <%= if assigns.player_turn.bet > 0 do %>
           <button phx-click="stand" class="border border-3 border-red-700 bg-white hover:bg-gray-200 text-red-700 font-bold py-2 px-4 rounded" > Stand </button>
           <% end %>
-          <button disabled={assigns.player_turn.bet + assigns.added_bet == 0 || assigns.player_turn.state != :pending} phx-click="place_bet" class="disabled:opacity-50 border border-1 border-green-700 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet <span class="text-black">$<%= assigns.player_turn.bet + assigns.added_bet %></span></button>
+          <button disabled={assigns.player_turn.bet + assigns.added_bet == 0 || assigns.player_turn.state != :pending} phx-click="place_bet" class="disabled:opacity-50 border border-1 border-green-700 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet <%= if assigns.player.type != "admin" do %>
+          <span class="text-black">$<%= assigns.player_turn.bet + assigns.added_bet %></span>
+          <% end %>
+</button>
         </div>
         <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center">
           <%= for turn <- assigns.turns do %>
@@ -199,20 +204,20 @@ defmodule KurtenWeb.RoundLive do
     {:noreply, push_redirect(socket, to: "/room")}
   end
 
-#  used after a win or lose
-  def handle_info([current_player: current_player], socket) do
-    {:noreply, assign(socket, :round, Map.put(socket.assigns.round, :current_player, current_player))}
-  end
-
   #  handle updates from round
   def handle_info([turns: turns, current_player: current_player], socket) do
-#    when the current_player changes put the new status before changing the current player
+    #    when the current_player changes put the new status before changing the current player
     previous_player = socket.assigns.round.current_player
     if previous_player != current_player do
       Process.send_after(self(), [current_player: current_player], 5000)
-      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, added_bet: 0}))}
-      else
-      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, current_player: current_player, added_bet: 0}))}
+      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns}), added_bet: 0)}
+    else
+      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, current_player: current_player}), added_bet: 0)}
     end
+  end
+
+#  used after a win or lose
+  def handle_info([current_player: current_player], socket) do
+    {:noreply, assign(socket, :round, Map.put(socket.assigns.round, :current_player, current_player))}
   end
 end
