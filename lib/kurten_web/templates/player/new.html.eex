@@ -1,5 +1,7 @@
 <%= if not is_nil(@room) do %>
-  <%= Enum.find(@room.players, &(&1.type == :admin)) %> invited you to join the room
+  <div class="flex justify-center">
+  <%= Enum.find(@room.players, &(&1.type == "admin")).first_name %> invited you to join the room
+  </div>
 <% end %>
 
 <%= form_for @changeset, (if is_nil(@room),  do: Routes.player_path(KurtenWeb.Endpoint, :create), else: Routes.player_path(KurtenWeb.Endpoint, :join, @room.room_id)) , fn f -> %>

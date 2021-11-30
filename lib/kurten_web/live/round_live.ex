@@ -25,11 +25,10 @@ defmodule KurtenWeb.RoundLive do
     {:ok, room, player} = Room.get_info_for_player(session["room_id"], session["player_id"])
     PubSub.subscribe(Kurten.PubSub, "round:#{room.round_id}")
     Presence.track(self(), "presence:#{session["room_id"]}", session["player_id"], %{})
-    {:ok, round} = Round.get_info(room.round_id)
-#
-#     player = %{id: 2}
-#     round = %{round_id: 200, turns: [%{player: %{id: 1, first_name: "eizik", last_name: "gottesfeld"}, bet: 5, state: :lost, cards: [%{name: 12, attributes: %{type: "rosier"}}, %{name: 10, attributes: %{}}]}, %{player: %{id: 2, first_name: "eizik", last_name: "gottesfeld"}, bet: 10, state: :lost, cards: [%{name: 11, attributes: %{type: "rosier"}}]}], current_player: 1}
-    {:ok, assign(socket, [round: round, player: player, view_mode: "current_player", selected_card_index: 0, added_bet: 0])}
+     case Round.get_info(room.round_id) do
+      {:ok, round} -> {:ok, assign(socket, [round: round, player: player, view_mode: "current_player", selected_card_index: 0, added_bet: 0])}
+      {:error, _} -> {:ok, push_redirect(socket, to: "/room")}
+    end
   end
 
   def render(assigns) do
@@ -86,10 +85,10 @@ defmodule KurtenWeb.RoundLive do
           </div>
         <% end %>
         <div class="flex justify-center align-center space-x-2">
-          <%= if assigns.player_turn.bet > 0 do %>
+          <%= if length(assigns.current_turn.cards) > 0 do %>
           <button phx-click="stand" class="border border-3 border-red-700 bg-white hover:bg-gray-200 text-red-700 font-bold py-2 px-4 rounded" > Stand </button>
           <% end %>
-          <button disabled={assigns.player_turn.bet + assigns.added_bet == 0 || assigns.player_turn.state != :pending} phx-click="place_bet" class="disabled:opacity-50 border border-1 border-green-700 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet <%= if assigns.player.type != "admin" do %>
+          <button disabled={(assigns.player_turn.bet + assigns.added_bet == 0 and assigns.player.type != "admin") || assigns.player_turn.state != :pending} phx-click="place_bet" class="disabled:opacity-50 border border-1 border-green-700 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet <%= if assigns.player.type != "admin" do %>
           <span class="text-black">$<%= assigns.player_turn.bet + assigns.added_bet %></span>
           <% end %>
 </button>
