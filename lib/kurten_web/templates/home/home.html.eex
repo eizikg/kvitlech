@@ -1,4 +1,6 @@
-<div class="flex flex-col mt-auto h-2/3">
-    <div class="flex mt-auto content-center text-center p-28">Create a room and invite your friends to join</div>
-    <%= button("Create Game", to: "/join", class: "bg-blue-400 rounded m-4", method: "get") %>
+<div class="flex flex-col mt-auto h-2/3  justify-center">
+    <div class="flex flex-col mt-auto justify-center text-center p-28 space-y-10">
+    <span>Create a room and invite your friends to join</span>
+    <%= button("Create Game", to: "/join", class: "btn-blue", method: "get") %>
+    </div>
 </div>

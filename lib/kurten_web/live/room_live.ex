@@ -21,7 +21,6 @@ defmodule KurtenWeb.RoomLive do
     {:ok, room, player} = Room.get_info_for_player(session["room_id"], session["player_id"])
 #     room = %{room_id: "hello", players: [%{name: "Breindy", type: "player"}, %{name: "Eizik", type: "player"}, %{name: "Chaim", type: "player"}, %{name: "Eizik", type: "player"}, %{name: "Eizik", type: "player"}]}
 #     player = %{name: "Breindy", type: "admin"}
-     IO.inspect(room, label: "room")
     {:ok, assign(socket, [player: player, room: room])}
   end
 
@@ -55,16 +54,24 @@ defmodule KurtenWeb.RoomLive do
              <.avatar player={player} balances={@room.balances} current_player={@player} />
           <% end %>
        </div>
-       <div x-data="{copied: false}" class="flex justify-center mt-auto mb-6">
-            <input disabled value={"#{url()}/join/#{@room.room_id}"} class="bg-gray-100 text-gray-600 flex-1 py-2 px-4 rounded-l-lg border-l-1 border-t-1 border-b-1 overflow-clip	"/>
-            <button class="bg-gray-300 text-gray-800 font-bold py-2 px-4 w-min-content rounded-r-lg inline-flex" id="copy_invite" type="button" @click={"copied = true; $clipboard('#{url()}/join/#{@room.room_id}')"}>
-                <span x-show="!copied">Copy</span>
-                <span x-show="copied">Copied!</span>
-                <svg x-show="copied" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-            </button>
-       </div>
+       <div class="flex flex-col mt-auto mb-6">
+         <div x-data>
+                <a @click={"window.open('whatsapp://send?text=#{whatsapp_message(@player, @room.room_id)}')"}>
+                    <img class="h-10 w-auto" src="https://cdn2.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2-free/128/social-whatsapp-circle-512.png"/>
+                </a>
+          </div>
+         <div x-data="{copied: false}" class="flex justify-center">
+              <input disabled value={"#{url(@room.room_id)}"} class="bg-gray-100 text-gray-600 flex-1 py-2 px-4 rounded-l-lg border-l-1 border-t-1 border-b-1 overflow-clip	"/>
+              <button class="bg-gray-300 text-gray-800 font-bold py-2 px-4 w-min-content rounded-r-lg inline-flex" id="copy_invite" type="button" @click={"copied = true; $clipboard('#{url(@room.room_id)}')"}>
+                  <span x-show="!copied">Copy</span>
+                  <span x-show="copied">Copied!</span>
+                  <svg x-show="copied" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+              </button>
+         </div>
+      </div>
+
        <%= if not is_nil(@room.round_id) do %>
        <button class="btn-blue" phx-click="join_round">Join round in progress</button>
        <%end%>
@@ -76,8 +83,12 @@ defmodule KurtenWeb.RoomLive do
 """
   end
 
-  def url do
-    System.get_env("BASE_URL") || "http://localhost:4000"
+  def url(room_id) do
+    "#{System.get_env("BASE_URL") || "http://localhost:4000"}/join/#{room_id}"
+  end
+
+  defp whatsapp_message(player, room_id) do
+    "#{player.first_name} #{player.last_name} is inviting you to to join kvitlech game. #{url(room_id)}"
   end
 
   def avatar(assigns) do

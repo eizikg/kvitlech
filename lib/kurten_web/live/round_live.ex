@@ -56,6 +56,14 @@ defmodule KurtenWeb.RoundLive do
              <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
           <% end %>
         </div>
+        <div class="text-center">
+          <%= if assigns.player_turn.state == :won do %>
+            <span class="text-blue-800 font-bold	">You won! 🎉</span>
+          <% end %>
+          <%= if assigns.player_turn.state == :lost do %>
+            <span class="text-blue-800 font-bold	">You lost 🙁</span>
+          <% end %>
+        </div>
         <div class="flex-col justify-center align-center h-full w-full">
           <%= if Enum.at(cards, assigns.selected_card_index) do %>
             <div class="max-w-full">
@@ -79,7 +87,7 @@ defmodule KurtenWeb.RoundLive do
           <%= if assigns.player_turn.bet > 0 do %>
           <button phx-click="stand" class="border border-3 border-red-700 bg-white hover:bg-gray-200 text-red-700 font-bold py-2 px-4 rounded" > Stand </button>
           <% end %>
-          <button disabled={assigns.player_turn.bet + assigns.added_bet == 0} phx-click="place_bet" class="disabled:opacity-50 border border-1 border-green-700 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet <span class="text-black">$<%= assigns.player_turn.bet + assigns.added_bet %></span></button>
+          <button disabled={assigns.player_turn.bet + assigns.added_bet == 0 || assigns.player_turn.state != :pending} phx-click="place_bet" class="disabled:opacity-50 border border-1 border-green-700 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet <span class="text-black">$<%= assigns.player_turn.bet + assigns.added_bet %></span></button>
         </div>
         <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center">
           <%= for turn <- assigns.turns do %>
@@ -96,6 +104,14 @@ defmodule KurtenWeb.RoundLive do
      <div class="text-center">
      <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
      </div>
+    <div class="text-center">
+        <%= if assigns.current_turn.state == :won do %>
+          <span class="text-blue-800 font-bold	">won! 🎉</span>
+        <% end %>
+        <%= if assigns.current_turn.state == :lost do %>
+          <span class="text-blue-800 font-bold	">Lost 🙁</span>
+        <% end %>
+      </div>
         <div class="flex -space-x-72 overflow-hidden my-1 p-2 max-w-full">
           <%= for card <- assigns.current_turn.cards do%>
           <.blank_card card={card}/>
@@ -183,8 +199,20 @@ defmodule KurtenWeb.RoundLive do
     {:noreply, push_redirect(socket, to: "/room")}
   end
 
+#  used after a win or lose
+  def handle_info([current_player: current_player], socket) do
+    {:noreply, assign(socket, :round, Map.put(socket.assigns.round, :current_player, current_player))}
+  end
+
   #  handle updates from round
   def handle_info([turns: turns, current_player: current_player], socket) do
-    {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, current_player: current_player, added_bet: 0}))}
+#    when the current_player changes put the new status before changing the current player
+    previous_player = socket.assigns.round.current_player
+    if previous_player != current_player do
+      Process.send_after(self(), [current_player: current_player], 5000)
+      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, added_bet: 0}))}
+      else
+      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, current_player: current_player, added_bet: 0}))}
+    end
   end
 end

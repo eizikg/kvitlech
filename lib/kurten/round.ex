@@ -28,7 +28,8 @@ defmodule Kurten.Round do
     turn = Map.put(turn, :state, :standby)
     turns = merge_turn(state.turns, turn)
     state = Map.put(state, :turns, turns)
-    terminate_game(state)
+    Process.send_after(self(), :terminate_game, 5000)
+    {:noreply, state}
   end
 
   def handle_cast({:standby, turn}, state) do
@@ -46,8 +47,9 @@ defmodule Kurten.Round do
     case turn.state do
       :pending -> PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: turns, current_player: state.current_player])
                   {:noreply, state}
-      :won -> terminate_game(state)
-      :lost -> terminate_game(state)
+      _ -> Process.send_after(self(), :terminate_game, 5000)
+           PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: turns, current_player: state.current_player])
+           {:noreply, state}
     end
   end
 
@@ -70,10 +72,9 @@ defmodule Kurten.Round do
   end
 
 #  terminate game when admin stands or lost.
-  def terminate_game(state) do
+  def handle_info(:terminate_game, state) do
     balances = calculate_balances(state.turns)
     PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", {:round_terminated, state})
-
     GenServer.cast(Room.via_tuple(state.room_id), {:round_complete, balances})
     Process.exit(self(), :normal)
   end
