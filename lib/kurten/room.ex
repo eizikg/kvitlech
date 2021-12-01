@@ -11,8 +11,7 @@ defmodule Kurten.Room do
   rooms have players
 """
 
- # room should close itself if inactive for 2 hours
- @round_timeout 120 * 6000
+ # room should close itself if inactive for 2 hoursd
 
   def init(args) do
     Phoenix.PubSub.subscribe(Kurten.PubSub, "presence:#{args[:room_id]}")
@@ -23,7 +22,7 @@ defmodule Kurten.Room do
     GenServer.start_link(__MODULE__, Keyword.take(options, [:admin, :room_id]), options)
   end
 
-  def handle_info(%{event: presence_state, payload: diff}, state) do
+  def handle_info(%{event: "presence_state", payload: diff}, state) do
     %{joins: joins, leaves: leaves} = diff
     players = Enum.map(state.players, fn player ->
       cond do
@@ -37,6 +36,10 @@ defmodule Kurten.Room do
     {:noreply, state}
   end
 
+  def handle_info(:timeout, _) do
+    Process.exit(self(), :normal)
+  end
+
   def handle_call({:join, player}, _from, state) do
     players = [player | state.players]
     state = Map.put(state, :players, players)
@@ -44,17 +47,16 @@ defmodule Kurten.Room do
     {:reply, state, state}
   end
 
-  def broadcast(state) do
-    PubSub.broadcast(Kurten.PubSub, "room:#{state.room_id}", [players: state.players])
-  end
-
   def handle_call(:room, _from, state) do
     {:reply, state, state}
   end
 
+  def broadcast(state) do
+    PubSub.broadcast(Kurten.PubSub, "room:#{state.room_id}", [players: state.players])
+  end
+
   def handle_cast(:create_round, state) do
     round_id = UUID.uuid1()
-    room_id = state.room_id
     via_tuple = {:via, Registry, {Kurten.RoundRegistry, round_id}}
     {:ok, _pid} = GenServer.start_link(Round, [players: state.players, round_id: round_id, room_id: state.room_id], name: via_tuple)
     PubSub.broadcast(Kurten.PubSub, "room:#{state.room_id}", :round_started)
@@ -64,11 +66,6 @@ defmodule Kurten.Room do
   def handle_cast({:round_complete, balances}, state) do
     {:noreply, Map.merge(state, %{balances: balances ++ state.balances, round_id: nil})}
   end
-
-  def handle_info(:timeout, state) do
-    Process.exit(self(), :normal)
-  end
-
 
 #  client
 

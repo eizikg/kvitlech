@@ -8,7 +8,6 @@ defmodule Kurten.Round do
   defstruct [:current_player, :round_id, :room_id, :deck, turns: []]
 
   # round should close itself if inactive for an hour
-  @round_timeout 60 * 6000
 
   use GenServer
 
@@ -89,7 +88,7 @@ defmodule Kurten.Round do
 #  terminate game when admin stands or lost.
   def handle_info(:terminate_game, state) do
     balances = calculate_balances(state.turns)
-    PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", {:round_terminated, state})
+    PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", :round_terminated)
     GenServer.cast(Room.via_tuple(state.room_id), {:round_complete, balances})
     Process.exit(self(), :normal)
   end
@@ -102,7 +101,7 @@ defmodule Kurten.Round do
         Map.put(acc, :players, [turn | acc.players])
       end
     end)
-    new_balances = Enum.map(player_turns, fn turn ->
+    Enum.map(player_turns, fn turn ->
       case turn.state do
         :lost -> %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
         :standby -> if player_won?(admin_turn, turn), do: %{amount: turn.bet, payer: admin_turn.player.id, payee: turn.player.id}, else: %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}

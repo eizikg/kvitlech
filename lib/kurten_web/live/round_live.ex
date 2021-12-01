@@ -4,21 +4,6 @@ defmodule KurtenWeb.RoundLive do
   alias Phoenix.PubSub
   alias Kurten.Room
   alias KurtenWeb.Presence
-  @moduledoc """
-  round keeps track of the round and shows who is playing.
-  when the person is playing, shows a different UI
-
-  states
-
-  current_turn. automatically updated when new turn starts
-  view_mode "self", "current_player". set by user but updated by system when turn changes
-  selected_card_index. index of card being viewed. changes when user clicks on other own card.
-          automatically updated to 0 when turn changes
-          changes to new card when player bets.
-          if a players turn has changed, the last card will slide in
-
-
-"""
 
   @impl true
   def mount(_params, session, socket) do
@@ -31,6 +16,29 @@ defmodule KurtenWeb.RoundLive do
     end
   end
 
+  @impl true
+  def handle_event("place_bet", _params, socket) do
+    Round.place_bet(socket.assigns.round.round_id, socket.assigns.turn, socket.assigns.turn.bet + socket.assigns.added_bet)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("stand", _params, socket) do
+    Round.stand(socket.assigns.round.round_id, socket.assigns.turn)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("select_card", %{"index" => index}, socket) do
+    {:noreply, assign(socket, :selected_card_index, String.to_integer(index))}
+  end
+
+  @impl true
+  def handle_event("bet_amount", %{"amount" => amount}, socket) do
+    {:noreply, assign(socket, added_bet: String.to_integer(amount))}
+  end
+
+  @impl true
   def render(assigns) do
     current_turn = Enum.find(assigns.round.turns, &(&1.player.id == assigns.round.current_player))
     turn = if assigns.view_mode == "self" do
@@ -42,13 +50,38 @@ defmodule KurtenWeb.RoundLive do
     index(assigns)
   end
 
+  @impl true
   def handle_info({:after_join, room_id}, socket) do
     Presence.track(self(), "presence:#{room_id}", socket.assigns.player.id, %{})
     {:noreply, socket}
   end
 
+  @impl true
+  def handle_info(:round_terminated, socket) do
+    {:noreply, push_redirect(socket, to: "/room")}
+  end
+
+  @impl true
+  def handle_info([turns: turns, current_player: current_player], socket) do
+    #    when the current_player changes put the new status before changing the current player
+    previous_player = socket.assigns.round.current_player
+    if previous_player != current_player do
+      Process.send_after(self(), [current_player: current_player], 5000)
+      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns}), added_bet: 0)}
+    else
+      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, current_player: current_player}), added_bet: 0)}
+    end
+  end
+
+#  used after a win or lose
+  @impl true
+  def handle_info([current_player: current_player], socket) do
+    {:noreply, assign(socket, :round, Map.put(socket.assigns.round, :current_player, current_player))}
+  end
+
   def index(assigns) do
     self_view? = assigns.player.id == assigns.turn.player.id
+    player_name = if self_view?, do: "You", else: "#{assigns.turn.player.first_name} #{assigns.turn.player.last_name}"
     # viewing own
     ~H"""
      <div class="p-3 flex flex-col h-full font-sans">
@@ -56,21 +89,21 @@ defmodule KurtenWeb.RoundLive do
           <%= if self_view? do %>
             <span class="text-blue-800 font-bold	">you</span> are playing
             <% else %>
-             <span class="text-blue-800 font-bold	"><%= assigns.turn.player.first_name%> <%= assigns.turn.player.last_name%></span> is playing
+             <span class="text-blue-800 font-bold	"><%= player_name %></span> is playing
           <% end %>
         </div>
         <div class="flex-col justify-center relative align-center h-full w-full">
-          <%= if self_view? or assigns.turn.state == :lost or (assigns.turn.player.type == "admin" and assigns.turn.state == :standing) do %>
+          <%= if self_view? or assigns.turn.state in [:lost, :won] or (assigns.turn.player.type == "admin" and assigns.turn.state == :standing) do %>
               <.revealed_cards self_view?={self_view?} turn={assigns.turn} selected_card_index={assigns.selected_card_index}/>
            <% else %>
               <.hidden_cards turn={assigns.turn}/>
            <% end %>
           <div class="absolute top-1/2 text-center font-bold animate-pulse w-full font-bold text-6xl z-50">
               <%= if assigns.turn.state == :won do %>
-                <span x-data x-init="confetti()" class="text-green-700">You won! 🎉</span>
+                <span x-data x-init={if self_view?, do: "confetti()"} class="text-green-700"><%= player_name %> won! 🎉</span>
               <% end %>
               <%= if assigns.turn.state == :lost do %>
-                <span class="text-red-600 z-50">You lost 🙁</span>
+                <span class="text-red-600 z-50"><%= player_name %> lost</span>
               <% end %>
               <%= if assigns.turn.state == :standby do %>
                 <span class="text-gray-600 z-50">Standing</span>
@@ -101,49 +134,47 @@ defmodule KurtenWeb.RoundLive do
     """
   end
 
-
-  # turn, self_view?, selected_card_index
-  def revealed_cards(%{turn: turn, self_view?: self_view?, selected_card_index: selected_card_index} = assigns) do
-    # if self view, show message if empty, otherwise show waiting for user
-    cards = Enum.with_index(turn.cards)
+  def revealed_cards(assigns) do
+    cards = Enum.with_index(assigns.turn.cards)
     ~H"""
-      <%= if card = Enum.at(cards, selected_card_index) do %>
+      <%= if card = Enum.at(cards, assigns.selected_card_index) do %>
       <div class="max-w-full">
         <.card card={card}/>
       </div>
       <% else %>
-        <%= if self_view? do %>
+        <%= if assigns.self_view? do %>
           <div class="flex justify-center items-center w-full h-full">
             <span class="text-center" >
-              <%= if turn.player.type == "admin" do %>
+              <%= if assigns.turn.player.type == "admin" do %>
                 Please take a card.
               <% else %>
                 Please select an amount and place bet.
               <% end %>
             </span>
           </div>
-        <% else %>
-          <div class="flex justify-center items-center w-full h-full">
-            <span class="text-center" >Waiting for user...</span>
-          </div>
         <% end %>
       <% end %>
-      <.card_list cards={cards} selected_card_index={selected_card_index} />
+      <.card_list cards={cards} selected_card_index={assigns.selected_card_index} />
     """
   end
 
-  def hidden_cards(%{turn: turn} = assigns) do
-    # if self view, show message if empty, otherwise show waiting for user
+  def hidden_cards(assigns) do
     ~H"""
+    <%= if length(assigns.turn.cards) == 0 do %>
+      <div class="flex justify-center items-center w-full h-full">
+          <span class="text-center" >
+              Waiting for player...
+          </span>
+      </div>
+    <% end %>
     <div class="flex -space-x-72">
-      <%= for card <- turn.cards do%>
+      <%= for card <- assigns.turn.cards do%>
       <.blank_card card={card}/>
       <% end %>
       </div>
     """
   end
 
-  # bet, added bet
   def bet_amount(assigns) do
     ~H"""
       <div class="flex justify-center mt-auto space-x-1 mb-2">
@@ -156,50 +187,12 @@ defmodule KurtenWeb.RoundLive do
     """
   end
 
-  def other_view(assigns) do
-    ~H"""
-     <div class="p-3 flex flex-col h-full">
-    <div class="text-center">
-      <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
-    </div>
-    <div class="flex relative overflow-hidden my-1 p-2 max-w-full">
-      <div class="flex -space-x-72">
-      <%= for card <- assigns.current_turn.cards do%>
-      <.blank_card card={card}/>
-      <% end %>
-      </div>
-      <div class="absolute top-1/2 text-center font-bold animate-pulse w-full font-bold text-6xl z-50">
-          <%= if assigns.current_turn.state == :won do %>
-            <span x-data class="text-green-700">Won</span>
-          <% end %>
-          <%= if assigns.current_turn.state == :lost do %>
-            <span class="text-red-600 z-50">Lost</span>
-          <% end %>
-          <%= if assigns.current_turn.state == :standby do %>
-            <span class="text-gray-600 z-50">Standing</span>
-          <% end %>
-       </div>
-    </div>
-    <div class="text-center">$<%= assigns.current_turn.bet %></div>
-    <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center mt-auto">
-      <%= for turn <- assigns.turns do %>
-      <.avatar turn={turn}/>
-      <% end %>
-    </div>
-    </div>
-    """
-  end
-
   def blank_card(assigns) do
     ~H"""
     <div class="p-3 flex justify-center">
         <img class="filter drop-shadow-xl h-auto w-4/5" src={Routes.static_path(KurtenWeb.Endpoint, "/images/blank.png")} class="w-auto"/>
     </div>
     """
-  end
-
-  def handle_event("bet_amount", %{"amount" => amount}, socket) do
-    {:noreply, assign(socket, added_bet: String.to_integer(amount))}
   end
 
   def card_list(assigns) do
@@ -210,10 +203,6 @@ defmodule KurtenWeb.RoundLive do
       <% end %>
     </div>
     """
-  end
-
-  def handle_event("select_card", %{"index" => index}, socket) do
-    {:noreply, assign(socket, :selected_card_index, String.to_integer(index))}
   end
 
   def avatar(assigns) do
@@ -240,42 +229,5 @@ defmodule KurtenWeb.RoundLive do
           <img class="filter drop-shadow-xl h-auto w-4/5" src={Routes.static_path(KurtenWeb.Endpoint, "/images/#{card.name}.png")} class="w-auto"/>
       </div>
       """
-  end
-
-  def handle_event("place_bet", params, socket) do
-    player_turn = player_turn(socket.assigns.round.turns, socket.assigns.player)
-    Round.place_bet(socket.assigns.round.round_id, player_turn, player_turn.bet + socket.assigns.added_bet)
-    {:noreply, socket}
-  end
-
-  def handle_event("stand", _params, socket) do
-    player_turn = player_turn(socket.assigns.round.turns, socket.assigns.player)
-    Round.stand(socket.assigns.round.round_id, player_turn)
-    {:noreply, socket}
-  end
-
-  defp player_turn(turns, player) do
-    Enum.find(turns, &(&1.player.id == player.id))
-  end
-
-  def handle_info({:round_terminated, state}, socket) do
-    {:noreply, push_redirect(socket, to: "/room")}
-  end
-
-  #  handle updates from round
-  def handle_info([turns: turns, current_player: current_player], socket) do
-    #    when the current_player changes put the new status before changing the current player
-    previous_player = socket.assigns.round.current_player
-    if previous_player != current_player do
-      Process.send_after(self(), [current_player: current_player], 5000)
-      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns}), added_bet: 0)}
-    else
-      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, current_player: current_player}), added_bet: 0)}
-    end
-  end
-
-#  used after a win or lose
-  def handle_info([current_player: current_player], socket) do
-    {:noreply, assign(socket, :round, Map.put(socket.assigns.round, :current_player, current_player))}
   end
 end

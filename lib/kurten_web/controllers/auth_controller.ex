@@ -3,7 +3,7 @@ defmodule KurtenWeb.AuthController do
   alias Kurten.Room
 
 
-  def player_validate(conn, params) do
+  def player_validate(conn, _params) do
     player = get_session(conn, :player_id)
     room = get_session(conn, :room_id)
     if is_binary(player) and is_binary(room) do

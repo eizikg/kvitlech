@@ -24,23 +24,28 @@ defmodule KurtenWeb.RoomLive do
     {:ok, assign(socket, [player: player, room: room])}
   end
 
-  def handle_event("start_round", params, socket) do
+  @impl true
+  def handle_event("start_round", _params, socket) do
     Room.start_round(socket.assigns.room.room_id)
     {:noreply, socket}
   end
 
-  def handle_info(:round_started, socket) do
-    {:noreply, push_redirect(socket, to: "/round")}
-  end
-
+  @impl true
   def handle_event("join_round", _params, socket) do
     {:noreply, push_redirect(socket, to: "/round")}
   end
 
+  @impl true
+  def handle_info(:round_started, socket) do
+    {:noreply, push_redirect(socket, to: "/round")}
+  end
+
+  @impl true
   def handle_info([players: players], socket) do
     {:noreply, assign(socket, :room, Map.put(socket.assigns.room, :players, players))}
   end
 
+  @impl true
   def render(assigns) do
     ~H"""
   <div class="w-full h-full">

@@ -3,7 +3,7 @@ defmodule Kurten.Turn do
   alias Kurten.Turn
 
 
-  @module_doc """
+  @moduledoc """
   possible states for a turn
   1. pending. player can still choose another card
   2. lost
@@ -24,7 +24,7 @@ defmodule Kurten.Turn do
 
   def get_sums(cards) do
     values = Enum.map(cards, fn card -> card.attributes.values end)
-    sums = calc_sums(values)
+    calc_sums(values)
   end
 
   def initialize(players) do
@@ -34,7 +34,7 @@ defmodule Kurten.Turn do
   end
 
   defp rosier?(cards) do
-    length(cards) == 2 and Enum.all?(cards, fn card -> Enum.any?(card.attributes, fn {k, v} -> v == "rosier" end) end)
+    length(cards) == 2 and Enum.all?(cards, fn card -> Enum.any?(card.attributes, fn {_k, v} -> v == "rosier" end) end)
   end
 
  @doc "calculate all possible sums of cards, since a card can have more than one value"
