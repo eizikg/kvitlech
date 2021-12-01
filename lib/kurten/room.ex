@@ -52,7 +52,6 @@ defmodule Kurten.Room do
     via_tuple = {:via, Registry, {Kurten.RoundRegistry, round_id}}
     {:ok, _pid} = GenServer.start_link(Round, [players: state.players, round_id: round_id, room_id: state.room_id], name: via_tuple)
     PubSub.broadcast(Kurten.PubSub, "room:#{state.room_id}", :round_started)
-    IO.inspect("start round")
     {:noreply, Map.put(state, :round_id, round_id)}
   end
 
@@ -61,7 +60,6 @@ defmodule Kurten.Room do
   end
 
   def handle_info(:timeout, state) do
-    IO.inspect("timeout")
     Process.exit(self(), :normal)
   end
 

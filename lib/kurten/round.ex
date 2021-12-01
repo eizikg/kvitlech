@@ -15,7 +15,8 @@ defmodule Kurten.Round do
   def init(attrs) do
     deck = Deck.new()
     turns = Turn.initialize(attrs[:players])
-    {:ok, %Kurten.Round{current_player: get_next_turn(turns).player.id, deck: deck, turns: turns, round_id: attrs[:round_id], room_id: attrs[:room_id]}}
+    {:ok, next_turn} = get_next_turn(turns)
+    {:ok, %Kurten.Round{current_player: next_turn.player.id, deck: deck, turns: turns, round_id: attrs[:round_id], room_id: attrs[:room_id]}}
   end
 
   def handle_cast({:join, player}, state) do
@@ -64,9 +65,9 @@ defmodule Kurten.Round do
     standing_turns = Enum.filter(turns, &(&1.state == :standby))
     cond  do
       # only the admin remains
-      is_nil(pending_turns) and length(standing_turns) > 0 and not admin_turn.state == :pending -> {:ok, admin_turn}
+      length(pending_turns) == 0 and length(standing_turns) > 0 and admin_turn.state == :pending -> {:ok, admin_turn}
       # everybody played and nobody standing
-      is_nil(pending_turns) -> :terminate
+      length(pending_turns) == 0 -> :terminate
       # there are still other players
       true -> {:ok, hd(pending_turns)}
     end
