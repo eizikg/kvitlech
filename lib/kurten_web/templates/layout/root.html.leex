@@ -11,8 +11,8 @@
     <script defer phx-track-static type="text/javascript" src="<%= Routes.static_path(@conn, "/assets/app.js") %>"></script>
   </head>
   <body>
-    <div class="h-screen w-screen flex flex-col">
-        <div class="mx-auto h-full w-full">
+    <div class="h-screen w-screen flex flex-col justify-center bg-gray-50">
+        <div class="mx-auto h-full w-full max-w-screen-sm bg-white shadow-md">
             <%= @inner_content %>
         </div>
     </div>

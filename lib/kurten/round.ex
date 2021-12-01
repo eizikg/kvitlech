@@ -24,44 +24,56 @@ defmodule Kurten.Round do
     {:noreply, Map.put(state, :turns, turns)}
   end
 
-  def handle_cast({:standby, turn}, state) when turn.player.type == "admin" do
-    turn = Map.put(turn, :state, :standby)
-    turns = merge_turn(state.turns, turn)
-    state = Map.put(state, :turns, turns)
-    Process.send_after(self(), :terminate_game, 5000)
-    {:noreply, state}
-  end
-
   def handle_cast({:standby, turn}, state) do
     turn = Map.put(turn, :state, :standby)
     turns = merge_turn(state.turns, turn)
-    next_turn = get_next_turn(turns)
-    state = Map.merge(state, %{turns: turns, current_player: next_turn.player.id})
-    PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: state.turns, current_player: state.current_player])
-    {:noreply, state}
-  end
-
-  def handle_cast({:bet, turn, amount}, state) when turn.player.type == "admin" do
-    [picked_card | rest] = state.deck
-    turn = Map.merge(turn, %{cards: [picked_card | turn.cards], bet: amount, state: Turn.calc_state([picked_card | turn.cards])})
-    turns = merge_turn(state.turns, turn)
-    state = Map.merge(state, %{turns: turns, deck: rest})
-    case turn.state do
-      :pending -> PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: turns, current_player: state.current_player])
-                  {:noreply, state}
-      _ -> Process.send_after(self(), :terminate_game, 5000)
-           PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: turns, current_player: state.current_player])
-           {:noreply, state}
+    state = Map.put(state, :turns, turns)
+    case get_next_turn(turns) do
+      {:ok, turn} -> state = Map.put(state, :current_player, turn.player.id)
+                     broadcast(state)
+                     {:noreply, state}
+      :terminate -> broadcast(state)
+                    Process.send_after(self(), :terminate_game, 5000)
+                    {:noreply, state}
     end
   end
 
   def handle_cast({:bet, turn, amount}, state) do
     [picked_card | rest] = state.deck
-    turn = Map.merge(turn, %{cards: [picked_card | turn.cards], bet: amount, state: Turn.calc_state([picked_card | turn.cards])})
+    turn = Map.merge(
+      turn,
+      %{cards: [picked_card | turn.cards], bet: amount, state: Turn.calc_state([picked_card | turn.cards])}
+    )
     turns = merge_turn(state.turns, turn)
-    next_turn = get_next_turn(turns)
-    PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: turns, current_player: next_turn.player.id])
-    {:noreply, Map.merge(state, %{turns: turns, current_player: next_turn.player.id, deck: rest})}
+    state = Map.merge(state, %{turns: turns, deck: rest})
+    case get_next_turn(turns) do
+      {:ok, turn} -> state = Map.put(state, :current_player, turn.player.id)
+                     broadcast(state)
+                     {:noreply, state}
+      :terminate -> broadcast(state)
+                    Process.send_after(self(), :terminate_game, 5000)
+                    {:noreply, state}
+    end
+  end
+
+  @spec get_next_turn([any()]) :: {:ok, any()} | :terminate
+  def get_next_turn(turns) do
+    # if there isn't a player anymore, return :terminate else next_turn
+    pending_turns = Enum.filter(turns, &(&1.state == :pending and &1.player.type != "admin"))
+    admin_turn = Enum.find(turns, &(&1.player.type == "admin"))
+    standing_turns = Enum.filter(turns, &(&1.state == :standby))
+    cond  do
+      # only the admin remains
+      is_nil(pending_turns) and length(standing_turns) > 0 and not admin_turn.state == :pending -> {:ok, admin_turn}
+      # everybody played and nobody standing
+      is_nil(pending_turns) -> :terminate
+      # there are still other players
+      true -> {:ok, hd(pending_turns)}
+    end
+  end
+
+  def broadcast(state) do
+    PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: state.turns, current_player: state.current_player])
   end
 
   def handle_call({:leave, player_id}, _from, state) do
@@ -101,23 +113,11 @@ defmodule Kurten.Round do
   defp player_won?(admin_turn, player_turn) do
     player_total = get_winning_number(player_turn.cards)
     admin_total = get_winning_number(admin_turn.cards)
-    player_total > admin_total
+    player_total > (admin_total || 0)
   end
 
   def get_winning_number(cards) do
     Turn.get_sums(cards) |> Enum.filter(&(&1 <= 21)) |> Enum.sort(&(&1 > &2)) |> Enum.at(0)
-  end
-
-  @spec get_next_turn(any()) :: nil | any()
-  defp get_next_turn(turns) do
-    pending_turns = Enum.filter(turns, &(&1.state == :pending))
-    standing_turns = Enum.filter(turns, &(&1.state == :standby))
-    if length(pending_turns) == 1 do
-      #      only the admin remains
-      hd(pending_turns)
-    else
-      Enum.find(pending_turns, fn turn -> turn.state == :pending and turn.player.type != "admin" end)
-    end
   end
 
   defp merge_turn(turns, turn) do
