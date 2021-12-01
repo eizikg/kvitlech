@@ -7,11 +7,6 @@ defmodule Kurten.Room do
 
   defstruct [:admin, :room_id, :round_id, balances: [],  players: []]
 
-  @moduledoc """
-  rooms have players
-"""
-
- # room should close itself if inactive for 2 hoursd
 
   def init(args) do
     Phoenix.PubSub.subscribe(Kurten.PubSub, "presence:#{args[:room_id]}")
@@ -22,7 +17,7 @@ defmodule Kurten.Room do
     GenServer.start_link(__MODULE__, Keyword.take(options, [:admin, :room_id]), options)
   end
 
-  def handle_info(%{event: "presence_state", payload: diff}, state) do
+  def handle_info(%{event: "presence_diff", payload: diff}, state) do
     %{joins: joins, leaves: leaves} = diff
     players = Enum.map(state.players, fn player ->
       cond do
@@ -56,7 +51,7 @@ defmodule Kurten.Room do
   end
 
   def handle_cast(:create_round, state) do
-    round_id = UUID.uuid1()
+    round_id = UUID.generate()
     via_tuple = {:via, Registry, {Kurten.RoundRegistry, round_id}}
     {:ok, _pid} = GenServer.start_link(Round, [players: state.players, round_id: round_id, room_id: state.room_id], name: via_tuple)
     PubSub.broadcast(Kurten.PubSub, "room:#{state.room_id}", :round_started)
@@ -70,7 +65,7 @@ defmodule Kurten.Room do
 #  client
 
   def create_room(admin) do
-    room_id = UUID.uuid1()
+    room_id = UUID.generate()
     {:ok, _pid} = DynamicSupervisor.start_child(Kurten.RoomSupervisor, {__MODULE__, [name: via_tuple(room_id), room_id: room_id, admin: admin]})
     {:ok, room_id}
   end

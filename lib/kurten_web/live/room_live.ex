@@ -53,28 +53,40 @@ defmodule KurtenWeb.RoomLive do
        <div class="text-center">
           Hello <%= @player.first_name %>
        </div>
+        <div class="text-center mt-1 mb-2 text-xs text-gray-500">
+              The bank can start the round.
+       </div>
 
-       <div class="flex flex-wrap w-full">
+       <div class="flex flex-wrap w-full overflow-scroll">
          <%= for player <- @room.players  do %>
              <.avatar player={player} balances={@room.balances} current_player={@player} />
           <% end %>
        </div>
-       <div class="flex flex-col mt-auto mb-6">
-         <div x-data>
-                <a @click={"window.open('whatsapp://send?text=#{whatsapp_message(@player, @room.room_id)}')"}>
+       <div x-data class="flex-col mt-auto justify-center w-full border-t-1 border-gray-500">
+         <hr/>
+         <div class="flex text-center justify-center text-lg text-gray-800 p-4">
+          <span>Invite your friends to join the game.</span>
+         </div>
+         <div class="flex justify-center w-full mb-4">
+           <div @click={"window.open('whatsapp://send?text=#{whatsapp_message(@player, @room.room_id)}')"} class="flex flex-col m-4 items-center text-center w-1/2">
+             <div class="flex w-max justify-center border border-1 rounded-full p-4 hover:bg-gray-100">
+                <a type="button">
                     <img class="h-10 w-auto" src="https://cdn2.iconfinder.com/data/icons/social-messaging-ui-color-shapes-2-free/128/social-whatsapp-circle-512.png"/>
                 </a>
+              </div>
+              <span class="p-2 text-sm text-gray-600">Share on Whatsapp</span>
+            </div>
+            <div x-data class="flex flex-col m-4 items-center text-center w-1/2">
+              <div @click={"copied = true; $clipboard('#{url(@room.room_id)}')"} class="flex w-max justify-center border border-1 rounded-full p-4 hover:bg-gray-100">
+                <a id="copy_invite" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-auto text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                </a>
+              </div>
+              <span class="p-2 text-sm text-gray-600">Copy Invite Link</span>
+            </div>
           </div>
-         <div x-data="{copied: false}" class="flex justify-center">
-              <input value={"#{url(@room.room_id)}"} class="bg-gray-100 text-gray-600 flex-1 py-2 px-4 rounded-l-lg border-l-1 border-t-1 border-b-1 overflow-clip	"/>
-              <button class="bg-gray-300 text-gray-800 font-bold py-2 px-4 w-min-content rounded-r-lg inline-flex" id="copy_invite" type="button" @click={"copied = true; $clipboard('#{url(@room.room_id)}')"}>
-                  <span x-show="!copied">Copy</span>
-                  <span x-show="copied">Copied!</span>
-                  <svg x-show="copied" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-              </button>
-         </div>
       </div>
 
        <%= if not is_nil(@room.round_id) do %>

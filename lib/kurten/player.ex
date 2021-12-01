@@ -18,7 +18,7 @@ defmodule Kurten.Player do
    %__MODULE__{}
    |> cast(params, [:first_name, :last_name, :type])
    |> validate_required([:first_name, :last_name])
-   |> generate_uuid
+   |> put_change(:id, UUID.generate())
   end
 
   def create(params, room_id) do
@@ -34,11 +34,6 @@ defmodule Kurten.Player do
     |> apply_changes
     {:ok, room_id} = Room.create_room(player)
     {:ok, room_id, player}
-  end
-
-  def generate_uuid(changeset) do
-    uuid = UUID.uuid1()
-    put_change(changeset, :id, uuid)
   end
 
 end
