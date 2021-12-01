@@ -32,14 +32,20 @@ defmodule Kurten.Room do
         true -> player
       end
     end)
-    {:noreply, Map.put(state, :players, players)}
+    state = Map.put(state, :players, players)
+    broadcast(state)
+    {:noreply, state}
   end
 
   def handle_call({:join, player}, _from, state) do
     players = [player | state.players]
     state = Map.put(state, :players, players)
-    PubSub.broadcast(Kurten.PubSub, "room:#{state.room_id}", [players: players])
+    broadcast(state)
     {:reply, state, state}
+  end
+
+  def broadcast(state) do
+    PubSub.broadcast(Kurten.PubSub, "room:#{state.room_id}", [players: state.players])
   end
 
   def handle_call(:room, _from, state) do

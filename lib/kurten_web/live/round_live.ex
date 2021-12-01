@@ -24,7 +24,7 @@ defmodule KurtenWeb.RoundLive do
   def mount(_params, session, socket) do
     {:ok, room, player} = Room.get_info_for_player(session["room_id"], session["player_id"])
     PubSub.subscribe(Kurten.PubSub, "round:#{room.round_id}")
-    Presence.track(self(), "presence:#{session["room_id"]}", session["player_id"], %{})
+    Process.send_after(self(), {:after_join, session["room_id"]}, 500)
      case Round.get_info(room.round_id) do
       {:ok, round} -> {:ok, assign(socket, [round: round, player: player, view_mode: "current_player", selected_card_index: 0, added_bet: 0])}
       {:error, _} -> {:ok, push_redirect(socket, to: "/room")}
@@ -32,77 +32,126 @@ defmodule KurtenWeb.RoundLive do
   end
 
   def render(assigns) do
-    %{round: round, player: player, view_mode: view_mode, selected_card_index: selected_card_index, added_bet: added_bet} = assigns
-    player_turn = Enum.find(round.turns, &(&1.player.id == player.id))
-    current_turn = Enum.find(round.turns, &(&1.player.id == round.current_player))
-    params = %{current_turn: current_turn, added_bet: added_bet, turns: round.turns, current_player: round.current_player, player: player, selected_card_index: selected_card_index, player_turn: player_turn, round_id: round.round_id}
-    if view_mode == "self" or player_turn.player.id == round.current_player do
-      self_view(params)
+    current_turn = Enum.find(assigns.round.turns, &(&1.player.id == assigns.round.current_player))
+    turn = if assigns.view_mode == "self" do
+      Enum.find(assigns.round.turns, &(&1.player.id == assigns.player.id))
     else
-      other_view(params)
+      current_turn
     end
+    assigns = Map.merge(assigns, %{turn: turn})
+    index(assigns)
   end
 
+  def handle_info({:after_join, room_id}, socket) do
+    Presence.track(self(), "presence:#{room_id}", socket.assigns.player.id, %{})
+    {:noreply, socket}
+  end
 
-  def self_view(assigns) do
-    cards = Enum.with_index(assigns.player_turn.cards)
+  def index(assigns) do
+    self_view? = assigns.player.id == assigns.turn.player.id
+    # viewing own
     ~H"""
      <div class="p-3 flex flex-col h-full font-sans">
         <div class="text-center">
-          <%= if assigns.player.id == assigns.current_turn.player.id do %>
+          <%= if self_view? do %>
             <span class="text-blue-800 font-bold	">you</span> are playing
             <% else %>
-             <span class="text-blue-800 font-bold	"><%= assigns.current_turn.player.first_name%> <%= assigns.current_turn.player.last_name%></span> is playing
+             <span class="text-blue-800 font-bold	"><%= assigns.turn.player.first_name%> <%= assigns.turn.player.last_name%></span> is playing
           <% end %>
         </div>
         <div class="flex-col justify-center relative align-center h-full w-full">
+          <%= if self_view? or assigns.turn.state == :lost or (assigns.turn.player.type == "admin" and assigns.turn.state == :standing) do %>
+              <.revealed_cards self_view?={self_view?} turn={assigns.turn} selected_card_index={assigns.selected_card_index}/>
+           <% else %>
+              <.hidden_cards turn={assigns.turn}/>
+           <% end %>
           <div class="absolute top-1/2 text-center font-bold animate-pulse w-full font-bold text-6xl z-50">
-              <%= if assigns.player_turn.state == :won do %>
+              <%= if assigns.turn.state == :won do %>
                 <span x-data x-init="confetti()" class="text-green-700">You won! 🎉</span>
               <% end %>
-              <%= if assigns.player_turn.state == :lost do %>
+              <%= if assigns.turn.state == :lost do %>
                 <span class="text-red-600 z-50">You lost 🙁</span>
               <% end %>
-              <%= if assigns.player_turn.state == :standby do %>
+              <%= if assigns.turn.state == :standby do %>
                 <span class="text-gray-600 z-50">Standing</span>
               <% end %>
-           </div>
-          <%= if Enum.at(cards, assigns.selected_card_index) do %>
-          <div class="max-w-full">
-            <.card card={Enum.at(cards, assigns.selected_card_index)}/>
           </div>
-          <% else %>
-            <%= if assigns.player.type != "admin" do %>
-              <div class="flex justify-center items-center w-full h-full">
-                <span class="text-center" >Select amount you'd like to bet.</span>
-              </div>
-            <% end %>
-          <% end %>
-          <.card_list cards={cards} selected_card_index={assigns.selected_card_index} />
         </div>
-        <%= if assigns.player.type != "admin" do %>
-          <div class="flex justify-center mt-auto space-x-1 mb-2">
-            <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={0} >$<%= assigns.player_turn.bet %></button>
-            <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 5} ><span class="text-gray-500">+</span> $5</button>
-            <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 3}><span class="text-gray-500">+</span> $3</button>
-            <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 2}><span class="text-gray-500">+</span> $2</button>
-            <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 1}><span class="text-gray-500">+</span> $1</button>
+        <%= if self_view? and assigns.turn.state == :pending do%>
+          <%= if assigns.player.type != "admin" do %>
+            <.bet_amount bet={assigns.turn.bet} added_bet={assigns.added_bet}/>
+          <% end %>
+          <div class="flex justify-center align-center space-x-2">
+            <%= if length(assigns.turn.cards) > 0 do %>
+              <button phx-click="stand" class="border border-3 border-red-700 bg-white hover:bg-gray-200 text-red-700 font-bold py-2 px-4 rounded" > Stand </button>
+            <% end %>
+            <button disabled={(assigns.turn.bet + assigns.added_bet == 0 and assigns.turn.player.type != "admin") || assigns.turn.state != :pending} phx-click="place_bet" class="disabled:opacity-50 border border-1 text-nowrap border-green-700 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet
+              <%= if assigns.player.type != "admin" do %>
+                <span class="text-black">$<%= assigns.turn.bet + assigns.added_bet %></span>
+              <% end %>
+            </button>
           </div>
         <% end %>
-        <div class="flex justify-center align-center space-x-2">
-          <%= if length(assigns.current_turn.cards) > 0 && assigns.player_turn.state == :pending do %>
-          <button phx-click="stand" class="border border-3 border-red-700 bg-white hover:bg-gray-200 text-red-700 font-bold py-2 px-4 rounded" > Stand </button>
-          <% end %>
-          <button disabled={(assigns.player_turn.bet + assigns.added_bet == 0 and assigns.player.type != "admin") || assigns.player_turn.state != :pending} phx-click="place_bet" class="disabled:opacity-50 border border-1 border-green-700 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet <%= if assigns.player.type != "admin" do %>
-          <span class="text-black">$<%= assigns.player_turn.bet + assigns.added_bet %></span>
-          <% end %>
-        </button>
-        </div>
         <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center">
-          <%= for turn <- assigns.turns do %>
+          <%= for turn <- assigns.round.turns do %>
             <.avatar turn={turn}/>
           <% end %>
         </div>
+      </div>
+    """
+  end
+
+
+  # turn, self_view?, selected_card_index
+  def revealed_cards(%{turn: turn, self_view?: self_view?, selected_card_index: selected_card_index} = assigns) do
+    # if self view, show message if empty, otherwise show waiting for user
+    cards = Enum.with_index(turn.cards)
+    ~H"""
+      <%= if card = Enum.at(cards, selected_card_index) do %>
+      <div class="max-w-full">
+        <.card card={card}/>
+      </div>
+      <% else %>
+        <%= if self_view? do %>
+          <div class="flex justify-center items-center w-full h-full">
+            <span class="text-center" >
+              <%= if turn.player.type == "admin" do %>
+                Please take a card.
+              <% else %>
+                Please select an amount and place bet.
+              <% end %>
+            </span>
+          </div>
+        <% else %>
+          <div class="flex justify-center items-center w-full h-full">
+            <span class="text-center" >Waiting for user...</span>
+          </div>
+        <% end %>
+      <% end %>
+      <.card_list cards={cards} selected_card_index={selected_card_index} />
+    """
+  end
+
+  def hidden_cards(%{turn: turn} = assigns) do
+    # if self view, show message if empty, otherwise show waiting for user
+    ~H"""
+    <div class="flex -space-x-72">
+      <%= for card <- turn.cards do%>
+      <.blank_card card={card}/>
+      <% end %>
+      </div>
+    """
+  end
+
+  # bet, added bet
+  def bet_amount(assigns) do
+    ~H"""
+      <div class="flex justify-center mt-auto space-x-1 mb-2">
+        <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={0} >$<%= assigns.bet %></button>
+        <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 5} ><span class="text-gray-500">+</span> $5</button>
+        <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 3}><span class="text-gray-500">+</span> $3</button>
+        <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 2}><span class="text-gray-500">+</span> $2</button>
+        <button class="rounded-md px-2  border border-2 border-gray-300 bg-gray-50" phx-click="bet_amount" phx-value-amount={assigns.added_bet + 1}><span class="text-gray-500">+</span> $1</button>
       </div>
     """
   end
