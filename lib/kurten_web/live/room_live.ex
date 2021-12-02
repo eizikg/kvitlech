@@ -85,7 +85,7 @@ defmodule KurtenWeb.RoomLive do
       </div>
 
        <%= if not is_nil(@room.round_id) do %>
-       <button class="btn-blue" phx-click="join_round">Join round in progress</button>
+       <button class="btn-blue" phx-click="join_round">View round in progress</button>
        <%end%>
        <%= if @player.type == "admin" and length(@room.players) > 1 and is_nil(@room.round_id) do%>
           <button class="btn-blue" phx-click="start_round">Start Round</button>

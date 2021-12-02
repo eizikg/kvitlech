@@ -19,12 +19,6 @@ defmodule Kurten.Round do
     {:ok, %Kurten.Round{current_player: next_turn.player.id, deck: deck, turns: turns, round_id: attrs[:round_id], room_id: attrs[:room_id]}}
   end
 
-  def handle_cast({:join, player}, state) do
-    turns = state.turns ++ Turn.initialize([player])
-    PubSub.broadcast(Kurten.PubSub, "round:#{state.round_id}", [turns: turns])
-    {:noreply, Map.put(state, :turns, turns)}
-  end
-
   def handle_cast({:standby, turn}, state) do
     turn = Map.put(turn, :state, :standby)
     turns = merge_turn(state.turns, turn)
