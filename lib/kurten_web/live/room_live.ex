@@ -116,10 +116,19 @@ defmodule KurtenWeb.RoomLive do
       <div class="flex justify-center align-center w-1/3">
               <div class="flex flex-col justify-center items-center align-center m-1 w-auto p-2">
                 <div class="relative">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" viewBox="0 0 20 20" fill="currentColor">
+                  <%= if assigns.player.type == "admin" do %>
+                    <div class="h-16 w-16 rounded-full bg-gray-200 flex justify-center align-center items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
+                        <path class="text-gray-600" fill-rule="evenodd" d="M10.496 2.132a1 1 0 00-.992 0l-7 4A1 1 0 003 8v7a1 1 0 100 2h14a1 1 0 100-2V8a1 1 0 00.496-1.868l-7-4zM6 9a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1zm3 1a1 1 0 012 0v3a1 1 0 11-2 0v-3zm5-1a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                    <span class={"absolute bottom-0 right-2 inline-block w-3 h-3 #{if assigns.player.presence == "online", do: "bg-green-600", else: "bg-gray-400"} border-2 border-white rounded-full"}></span>
+                  <% else %>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" viewBox="0 0 20 20" fill="currentColor">
                     <path class="text-gray-200" fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd" />
-                    <span class={"absolute bottom-2 right-3 inline-block w-3 h-3 #{if assigns.player.presence == "online", do: "bg-green-600", else: "bg-gray-400"} border-2 border-white rounded-full"}></span>
-                </svg>
+                    </svg>
+                  <span class={"absolute bottom-2 right-3 inline-block w-3 h-3 #{if assigns.player.presence == "online", do: "bg-green-600", else: "bg-gray-400"} border-2 border-white rounded-full"}></span>
+                  <% end %>
                 </div>
                 <div class="text-center">
                 <%= if assigns.player.id == assigns.current_player.id do %>

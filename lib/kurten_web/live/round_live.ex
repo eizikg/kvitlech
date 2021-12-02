@@ -55,6 +55,10 @@ defmodule KurtenWeb.RoundLive do
     Enum.find(assigns.round.turns, &(&1.player.id == assigns.viewing_player))
   end
 
+  def get_current_turn(assigns) do
+    Enum.find(assigns.round.turns, &(&1.player.id == assigns.round.current_player))
+  end
+
   @impl true
   def handle_info(:round_terminated, socket) do
     {:noreply, push_redirect(socket, to: "/room")}
@@ -82,8 +86,18 @@ defmodule KurtenWeb.RoundLive do
     player.id == turn.player.id
   end
 
+  def is_user_turn?(assigns) do
+    assigns.player.id == assigns.round.current_player
+  end
+
+  defp player_name(player) do
+    "#{player.first_name} #{player.last_name}"
+  end
+
   def index(assigns) do
-    player_name = if self_view?(assigns.player, assigns.turn), do: "You", else: "#{assigns.turn.player.first_name} #{assigns.turn.player.last_name}"
+    player_name = if self_view?(assigns.player, assigns.turn), do: "You", else: player_name(assigns.turn.player)
+    current_turn = get_current_turn(assigns)
+    current_player_is_playing = current_turn.player.id == assigns.player.id
     # viewing own
     ~H"""
      <div class="p-3 flex flex-col h-full font-sans">
@@ -117,7 +131,7 @@ defmodule KurtenWeb.RoundLive do
            </div>
         <% end %>
         </div>
-        <%= if self_view?(assigns.player, assigns.turn) and assigns.turn.state == :pending do%>
+        <%= if self_view?(assigns.player, assigns.turn) and assigns.turn.state == :pending and is_user_turn?(assigns) do%>
           <%= if assigns.player.type != "admin" do %>
             <.bet_amount bet={assigns.turn.bet} added_bet={assigns.added_bet}/>
           <% end %>
@@ -129,6 +143,13 @@ defmodule KurtenWeb.RoundLive do
             </button>
           </div>
         <% end %>
+        <div class="flex justify-center">
+          <%= if current_player_is_playing do %>
+            <span class="text-blue-800 font-bold	">You are playing</span>
+            <% else %>
+             <span class="text-blue-800 font-bold	"><%= player_name(current_turn.player) %> is playing</span>
+          <% end %>
+        </div>
         <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center">
           <%= for turn <- assigns.round.turns do %>
             <.avatar turn={turn} player={assigns.player} current_player={assigns.round.current_player} viewing_player={assigns.viewing_player}/>
