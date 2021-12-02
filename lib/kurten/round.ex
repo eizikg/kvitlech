@@ -41,6 +41,22 @@ defmodule Kurten.Round do
     end
   end
 
+  def handle_cast({:skip, turn}, state) do
+    turn = Map.put(turn, :state, :skipped)
+    turns = merge_turn(state.turns, turn)
+    state = Map.put(state, :turns, turns)
+    case get_next_turn(turns) do
+      {:ok, turn} -> state = Map.put(state, :current_player, turn.player.id)
+                     broadcast(state)
+                     {:noreply, state}
+      :terminate -> turns = calculate_end_state(turns)
+                    state = Map.put(state, :turns, turns)
+                    broadcast(state)
+                    Process.send_after(self(), :terminate_game, 5000)
+                    {:noreply, state}
+    end
+  end
+
   def handle_cast({:bet, turn, amount}, state) do
     [picked_card | rest] = state.deck
     turn = Map.merge(
@@ -100,7 +116,7 @@ defmodule Kurten.Round do
 
 #  add to calculate win or loose
   defp calculate_balances(turns) do
-    %{admin: admin_turn, players: player_turns} = Enum.reduce(turns, %{players: []}, fn turn, acc ->
+    %{admin: admin_turn, players: player_turns} = Enum.reduce(Enum.filter(turns, &(&1.state != :skipped)), %{players: []}, fn turn, acc ->
       if turn.player.type == "admin" do
         Map.put(acc, :admin, turn)
       else
@@ -169,6 +185,10 @@ defmodule Kurten.Round do
 
   def stand(round_id, turn) do
     GenServer.cast(via_tuple(round_id), {:standby, turn})
+  end
+
+  def skip(round_id, turn) do
+    GenServer.cast(via_tuple(round_id), {:skip, turn})
   end
 
   defp via_tuple(round_id) do

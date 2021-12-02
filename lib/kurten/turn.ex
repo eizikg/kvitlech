@@ -9,6 +9,7 @@ defmodule Kurten.Turn do
   2. lost
   3. won
   4. standby
+  5. player is skipped
 """
   defstruct [:player, state: :pending, cards: [], bet: 0]
 
