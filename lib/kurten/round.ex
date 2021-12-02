@@ -142,7 +142,8 @@ defmodule Kurten.Round do
         _ -> {turn, admin_balance}
       end
     end)
-    [%{bet: admin_balance | admin_turn} | player_turns]
+    admin_turn = Map.put(admin_turn, :bet, admin_balance)
+    [admin_turn | player_turns]
   end
 
   defp player_won?(admin_turn, player_turn) do
