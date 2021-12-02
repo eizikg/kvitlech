@@ -92,7 +92,7 @@ defmodule KurtenWeb.RoundLive do
           <% end %>
         </div>
         <div class="flex-col justify-center relative align-center h-full w-full">
-          <%= if self_view? or assigns.turn.state in [:lost, :won] or (assigns.turn.player.type == "admin" and assigns.turn.state == :standing) do %>
+          <%= if (self_view?) or (assigns.turn.state in [:lost, :won]) or (assigns.turn.player.type == "admin" and assigns.turn.state != :pending) do %>
               <.revealed_cards self_view?={self_view?} turn={assigns.turn} selected_card_index={assigns.selected_card_index}/>
            <% else %>
               <.hidden_cards turn={assigns.turn}/>
@@ -108,12 +108,12 @@ defmodule KurtenWeb.RoundLive do
                 <span class="text-gray-600 z-50">Standing</span>
               <% end %>
           </div>
-        </div>
         <%= if assigns.turn.player.type != "admin" do %>
            <div class="flex justify-center text-gray-800 text-xl">
-            <span class="text-black">$<span class="font-bold text-blue-800"><%= assigns.turn.bet + assigns.added_bet %></span></span>
+            <span class="text-blue-700">$<span class="font-bold text-blue-800"><%= assigns.turn.bet + assigns.added_bet %></span></span>
            </div>
         <% end %>
+        </div>
         <%= if self_view? and assigns.turn.state == :pending do%>
           <%= if assigns.player.type != "admin" do %>
             <.bet_amount bet={assigns.turn.bet} added_bet={assigns.added_bet}/>
@@ -200,17 +200,24 @@ defmodule KurtenWeb.RoundLive do
       "You"
     end
     ~H"""
-      <div >
-     <button class={"inline-block h-12 w-12 rounded-full ring-2 ring-gray-300 border-2 border-blue-100 border items-center bg-gray-100 shadow-xl flex justify-center #{if self?, do: "z-10 ring-green-700"}"}><%= player_name %></button>
-      <%= if assigns.turn.state == :lost do %>
-        <span class="flex text-red-700 text-center justify-center"><%= "-#{assigns.turn.bet}" %><span>
-      <% end %>
-      <%= if assigns.turn.state == :pending do %>
-        <span class="flex text-gray-400	text-center justify-center">--<span>
-      <% end %>
-      <%= if assigns.turn.state == :won do %>
-        <span class="flex text-green-700 text-center justify-center"><%= "#{assigns.turn.bet}" %><span>
-      <% end %>
+      <div class="one">
+       <button class={"inline-block h-12 w-12 rounded-full ring-2 ring-gray-300 border-2 border-blue-100 border items-center bg-gray-100 shadow-xl flex justify-center #{if self?, do: "z-10 ring-green-700"}"}><%= player_name %></button>
+        <%= if assigns.turn.state == :lost do %>
+          <span class="flex text-red-700 text-center justify-center"><%= "-#{assigns.turn.bet}" %><span>
+        <% end %>
+        <%= if assigns.turn.state == :pending do %>
+          <span class="flex text-gray-400	text-center justify-center">--<span>
+        <% end %>
+        <%= if assigns.turn.state == :standby do %>
+          <span class="flex text-gray-400	text-center justify-center p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          <span>
+        <% end %>
+        <%= if assigns.turn.state == :won do %>
+          <span class="flex text-green-700 text-center justify-center"><%= "#{assigns.turn.bet}" %><span>
+        <% end %>
     </div>
     """
   end

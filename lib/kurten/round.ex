@@ -32,7 +32,9 @@ defmodule Kurten.Round do
       {:ok, turn} -> state = Map.put(state, :current_player, turn.player.id)
                      broadcast(state)
                      {:noreply, state}
-      :terminate -> broadcast(state)
+      :terminate -> turns = calculate_end_state(turns)
+                    state = Map.put(state, :turns, turns)
+                    broadcast(state)
                     Process.send_after(self(), :terminate_game, 5000)
                     {:noreply, state}
     end
@@ -50,7 +52,9 @@ defmodule Kurten.Round do
       {:ok, turn} -> state = Map.put(state, :current_player, turn.player.id)
                      broadcast(state)
                      {:noreply, state}
-      :terminate -> broadcast(state)
+      :terminate -> turns = calculate_end_state(turns)
+                    state = Map.put(state, :turns, turns)
+                    broadcast(state)
                     Process.send_after(self(), :terminate_game, 5000)
                     {:noreply, state}
     end
@@ -105,10 +109,27 @@ defmodule Kurten.Round do
     Enum.map(player_turns, fn turn ->
       case turn.state do
         :lost -> %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
-        :standby -> if player_won?(admin_turn, turn), do: %{amount: turn.bet, payer: admin_turn.player.id, payee: turn.player.id}, else: %{amount: turn.bet, payee: admin_turn.player.id, payer: turn.player.id}
         :won -> %{amount: turn.bet, payer: admin_turn.player.id, payee: turn.player.id}
       end
     end)
+  end
+
+  def calculate_end_state(turns) do
+    %{admin: admin_turn, players: player_turns} = Enum.reduce(turns, %{players: []}, fn turn, acc ->
+      if turn.player.type == "admin" do
+        Map.put(acc, :admin, turn)
+      else
+        Map.put(acc, :players, [turn | acc.players])
+      end
+    end)
+    player_turns = Enum.map(player_turns, fn turn ->
+      case turn.state do
+        :standby -> state = if player_won?(admin_turn, turn), do: :won, else: :lost
+                    Map.put(turn, :state, state)
+        _ -> turn
+      end
+    end)
+    [admin_turn | player_turns]
   end
 
   defp player_won?(admin_turn, player_turn) do
