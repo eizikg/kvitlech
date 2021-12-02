@@ -195,9 +195,9 @@ defmodule KurtenWeb.RoundLive do
   def avatar(assigns) do
     self? = assigns.player.id == assigns.turn.player.id
     player_name = if self? do
-      "#{String.at(assigns.turn.player.first_name, 0) |> String.upcase}#{String.at(assigns.turn.player.last_name, 0) |> String.upcase}"
-      else
       "You"
+      else
+        "#{String.at(assigns.turn.player.first_name, 0) |> String.upcase}#{String.at(assigns.turn.player.last_name, 0) |> String.upcase}"
     end
     ~H"""
       <div class="one">
