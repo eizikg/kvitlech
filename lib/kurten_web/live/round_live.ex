@@ -78,28 +78,31 @@ defmodule KurtenWeb.RoundLive do
     {:noreply, assign(socket, :round, Map.put(socket.assigns.round, :current_player, current_player))}
   end
 
+  def self_view?(player, turn) do
+    player.id == turn.player.id
+  end
+
   def index(assigns) do
-    self_view? = assigns.player.id == assigns.turn.player.id
-    player_name = if self_view?, do: "You", else: "#{assigns.turn.player.first_name} #{assigns.turn.player.last_name}"
+    player_name = if self_view?(assigns.player, assigns.turn), do: "You", else: "#{assigns.turn.player.first_name} #{assigns.turn.player.last_name}"
     # viewing own
     ~H"""
      <div class="p-3 flex flex-col h-full font-sans">
         <div class="text-center">
-          <%= if self_view? do %>
+          <%= if self_view?(assigns.player, assigns.turn) do %>
             <span class="text-blue-800 font-bold	">you</span> are playing
             <% else %>
              <span class="text-blue-800 font-bold	"><%= player_name %></span> is playing
           <% end %>
         </div>
         <div class="flex-col justify-center relative align-center h-full w-full">
-          <%= if (self_view?) or (assigns.turn.state in [:lost, :won]) or (assigns.turn.player.type == "admin" and assigns.turn.state != :pending) do %>
-              <.revealed_cards self_view?={self_view?} turn={assigns.turn} selected_card_index={assigns.selected_card_index}/>
+          <%= if (self_view?(assigns.player, assigns.turn)) or (assigns.turn.state in [:lost, :won]) or (assigns.turn.player.type == "admin" and assigns.turn.state != :pending) do %>
+              <.revealed_cards self_view?={self_view?(assigns.player, assigns.turn)} turn={assigns.turn} selected_card_index={assigns.selected_card_index}/>
            <% else %>
               <.hidden_cards turn={assigns.turn}/>
            <% end %>
           <div class="absolute top-1/2 text-center font-bold animate-pulse w-full font-bold text-6xl z-50">
               <%= if assigns.turn.state == :won do %>
-                <span x-data x-init={if self_view?, do: "confetti()"} class="text-green-700"><%= player_name %> won! 🎉</span>
+                <span x-data x-init={if self_view?(assigns.player, assigns.turn), do: "confetti()"} class="text-green-700"><%= player_name %> won! 🎉</span>
               <% end %>
               <%= if assigns.turn.state == :lost do %>
                 <span class="text-red-600 z-50"><%= player_name %> lost</span>
@@ -114,7 +117,7 @@ defmodule KurtenWeb.RoundLive do
            </div>
         <% end %>
         </div>
-        <%= if self_view? and assigns.turn.state == :pending do%>
+        <%= if self_view?(assigns.player, assigns.turn) and assigns.turn.state == :pending do%>
           <%= if assigns.player.type != "admin" do %>
             <.bet_amount bet={assigns.turn.bet} added_bet={assigns.added_bet}/>
           <% end %>
