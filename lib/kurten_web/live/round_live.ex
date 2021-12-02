@@ -141,7 +141,7 @@ defmodule KurtenWeb.RoundLive do
             <.bet_amount bet={assigns.turn.bet} added_bet={assigns.added_bet}/>
           <% end %>
           <div class="flex justify-center align-center space-x-2">
-            <%= if length(assigns.turn.cards) > 0 do %>
+            <%= if length(assigns.turn.cards) > 1 do %>
               <button phx-click="stand" class="border border-3 border-red-700 bg-white hover:bg-gray-200 text-red-700 font-bold py-2 px-4 rounded" > Stand </button>
             <% end %>
             <button disabled={(assigns.turn.bet + assigns.added_bet == 0 and assigns.turn.player.type != "admin") || assigns.turn.state != :pending} phx-click="place_bet" class="disabled:opacity-50 border border-1 text-nowrap border-green-700 text-white font-bold py-2 px-4 rounded" style="background-color: limegreen">Place bet

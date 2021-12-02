@@ -136,9 +136,9 @@ defmodule Kurten.Round do
     {player_turns, admin_balance} = Enum.map_reduce(player_turns, 0, fn turn, admin_balance ->
       case turn.state do
         :standby -> state = if player_won?(admin_turn, turn), do: :won, else: :lost
-               {Map.put(turn, :state, state), admin_balance - turn.amount}
-        :won -> {turn, admin_balance - turn.amount}
-        :lost -> {turn, admin_balance + turn.amount}
+               {Map.put(turn, :state, state), admin_balance - turn.bet}
+        :won -> {turn, admin_balance - turn.bet}
+        :lost -> {turn, admin_balance + turn.bet}
         _ -> {turn, admin_balance}
       end
     end)
