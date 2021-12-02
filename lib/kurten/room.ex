@@ -53,7 +53,8 @@ defmodule Kurten.Room do
   def handle_cast(:create_round, state) do
     round_id = UUID.generate()
     via_tuple = {:via, Registry, {Kurten.RoundRegistry, round_id}}
-    {:ok, _pid} = GenServer.start_link(Round, [players: state.players, round_id: round_id, room_id: state.room_id], name: via_tuple)
+    active_players = Enum.filter(state.players, fn player -> player.presence == "online" end)
+    {:ok, _pid} = GenServer.start_link(Round, [players: active_players, round_id: round_id, room_id: state.room_id], name: via_tuple)
     PubSub.broadcast(Kurten.PubSub, "room:#{state.room_id}", :round_started)
     {:noreply, Map.put(state, :round_id, round_id)}
   end
