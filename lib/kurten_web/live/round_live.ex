@@ -11,7 +11,7 @@ defmodule KurtenWeb.RoundLive do
     PubSub.subscribe(Kurten.PubSub, "round:#{room.round_id}")
     Presence.track(self(), "presence:#{session["room_id"]}", session["player_id"], %{})
      case Round.get_info(room.round_id) do
-      {:ok, round} -> {:ok, assign(socket, [round: round, player: player, view_mode: "current_player", selected_card_index: 0, added_bet: 0])}
+      {:ok, round} -> {:ok, assign(socket, [round: round, player: player, viewing_player: round.current_player, selected_card_index: 0, added_bet: 0])}
       {:error, _} -> {:ok, push_redirect(socket, to: "/room")}
     end
   end
@@ -21,6 +21,10 @@ defmodule KurtenWeb.RoundLive do
     turn = get_turn(socket.assigns)
     Round.place_bet(socket.assigns.round.round_id, turn, turn.bet + socket.assigns.added_bet)
     {:noreply, socket}
+  end
+
+  def handle_event("view_player", %{"player_id" => player_id}, socket) do
+    {:noreply, assign(socket, viewing_player: player_id)}
   end
 
   @impl true
@@ -48,11 +52,7 @@ defmodule KurtenWeb.RoundLive do
   end
 
   defp get_turn(assigns) do
-    if assigns.view_mode == "self" do
-      Enum.find(assigns.round.turns, &(&1.player.id == assigns.player.id))
-    else
-      Enum.find(assigns.round.turns, &(&1.player.id == assigns.round.current_player))
-    end
+    Enum.find(assigns.round.turns, &(&1.player.id == assigns.viewing_player))
   end
 
   @impl true
@@ -66,16 +66,16 @@ defmodule KurtenWeb.RoundLive do
     previous_player = socket.assigns.round.current_player
     if previous_player != current_player do
       Process.send_after(self(), [current_player: current_player], 3000)
-      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns}), added_bet: 0)}
+      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, viewing_player: previous_player}), added_bet: 0)}
     else
-      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, current_player: current_player}), added_bet: 0)}
+      {:noreply, assign(socket, round: Map.merge(socket.assigns.round, %{turns: turns, current_player: current_player, viewing_player: current_player}), added_bet: 0)}
     end
   end
 
 #  used after a win or lose
   @impl true
   def handle_info([current_player: current_player], socket) do
-    {:noreply, assign(socket, :round, Map.put(socket.assigns.round, :current_player, current_player))}
+    {:noreply, assign(socket, :round, Map.merge(socket.assigns.round, %{current_player: current_player, viewing_player: current_player}))}
   end
 
   def self_view?(player, turn) do
@@ -89,9 +89,9 @@ defmodule KurtenWeb.RoundLive do
      <div class="p-3 flex flex-col h-full font-sans">
         <div class="text-center">
           <%= if self_view?(assigns.player, assigns.turn) do %>
-            <span class="text-blue-800 font-bold	">you</span> are playing
+            <span class="text-blue-800 font-bold	">you</span>
             <% else %>
-             <span class="text-blue-800 font-bold	"><%= player_name %></span> is playing
+             <span class="text-blue-800 font-bold	"><%= player_name %></span>
           <% end %>
         </div>
         <div class="flex-col justify-center relative align-center h-full w-full">
@@ -131,7 +131,7 @@ defmodule KurtenWeb.RoundLive do
         <% end %>
         <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center">
           <%= for turn <- assigns.round.turns do %>
-            <.avatar turn={turn} player={assigns.player}/>
+            <.avatar turn={turn} player={assigns.player} current_player={assigns.round.current_player} viewing_player={assigns.viewing_player}/>
           <% end %>
         </div>
       </div>
@@ -203,13 +203,13 @@ defmodule KurtenWeb.RoundLive do
         "#{String.at(assigns.turn.player.first_name, 0) |> String.upcase}#{String.at(assigns.turn.player.last_name, 0) |> String.upcase}"
     end
     ~H"""
-      <div class="one">
-       <button class={"inline-block h-12 w-12 rounded-full ring-2 ring-gray-300 border-2 border-blue-100 border items-center bg-gray-100 shadow-xl flex justify-center #{if self?, do: "z-10 ring-green-700"}"}><%= player_name %></button>
+      <div>
+       <button phx-click="view_player" phx-value-player_id={assigns.turn.player.id}  class={"inline-block h-12 w-12 rounded-full ring-2 ring-gray-300 border-2 border-blue-100 border items-center bg-gray-100 shadow-xl flex justify-center #{if assigns.current_player == assigns.turn.player.id, do: "z-10 ring-green-700"}"}><%= player_name %></button>
         <%= if assigns.turn.state == :lost do %>
-          <span class="flex text-red-700 text-center justify-center"><%= "-#{assigns.turn.bet}" %><span>
+          <span class="flex text-red-700 text-center justify-center"><%= "-#{assigns.turn.bet}" %></span>
         <% end %>
         <%= if assigns.turn.state == :pending do %>
-          <span class="flex text-gray-400	text-center justify-center">--<span>
+          <span class="flex text-gray-400	text-center justify-center">--</span>
         <% end %>
         <%= if assigns.turn.state == :standby do %>
           <span class="flex text-gray-400	text-center justify-center p-1">
@@ -219,7 +219,12 @@ defmodule KurtenWeb.RoundLive do
           <span>
         <% end %>
         <%= if assigns.turn.state == :won do %>
-          <span class="flex text-green-700 text-center justify-center"><%= "#{assigns.turn.bet}" %><span>
+          <span class="flex text-green-700 text-center justify-center"><%= "#{assigns.turn.bet}" %></span>
+        <% end %>
+        <%= if assigns.viewing_player == assigns.turn.player.id do %>
+            <div class="flex justify-center">
+            <div class="h-2 rounded bg-blue-700 w-6"></div>
+            </div>
         <% end %>
     </div>
     """
