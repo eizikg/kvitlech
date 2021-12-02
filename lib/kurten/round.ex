@@ -13,7 +13,7 @@ defmodule Kurten.Round do
 
   def init(attrs) do
     deck = Deck.new()
-    turns = Turn.initialize(attrs[:players])
+    [turns: turns, deck: deck] = Turn.initialize(attrs[:players], deck)
     {:ok, next_turn} = get_next_turn(turns)
     {:ok, %Kurten.Round{current_player: next_turn.player.id, deck: deck, turns: turns, round_id: attrs[:round_id], room_id: attrs[:room_id]}}
   end
@@ -93,6 +93,7 @@ defmodule Kurten.Round do
     Process.exit(self(), :normal)
   end
 
+#  add to calculate win or loose
   defp calculate_balances(turns) do
     %{admin: admin_turn, players: player_turns} = Enum.reduce(turns, %{players: []}, fn turn, acc ->
       if turn.player.type == "admin" do

@@ -27,10 +27,13 @@ defmodule Kurten.Turn do
     calc_sums(values)
   end
 
-  def initialize(players) do
-    for player <- players do
-      %Turn{player: player}
-    end
+  def initialize(players, deck) do
+    IO.inspect("initialize")
+    {turns, deck} = Enum.map_reduce(players, deck, fn player, [card | rest] ->
+      {%Turn{player: player, cards: [card]}, rest}
+    end)
+    [turns: turns, deck: deck]
+    |> IO.inspect
   end
 
   defp rosier?(cards) do

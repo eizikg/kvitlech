@@ -13,14 +13,9 @@ defmodule KurtenWeb.RoomLive do
 
   @impl true
   def mount(_params, session, socket) do
-#    subscribe to room updates
-#    get room info for user
     PubSub.subscribe(Kurten.PubSub, "room:#{session["room_id"]}")
     Presence.track(self(), "presence:#{session["room_id"]}", session["player_id"], %{})
-
     {:ok, room, player} = Room.get_info_for_player(session["room_id"], session["player_id"])
-#     room = %{room_id: "hello", players: [%{name: "Breindy", type: "player"}, %{name: "Eizik", type: "player"}, %{name: "Chaim", type: "player"}, %{name: "Eizik", type: "player"}, %{name: "Eizik", type: "player"}]}
-#     player = %{name: "Breindy", type: "admin"}
     {:ok, assign(socket, [player: player, room: room])}
   end
 
