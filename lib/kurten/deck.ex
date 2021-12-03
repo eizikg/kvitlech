@@ -17,7 +17,7 @@ defmodule Kurten.Deck do
   ]
 
   def new do
-    Enum.reduce(@cards, [], fn x, acc -> acc ++ Enum.map(1..3, fn _ -> x end) end)
+    Enum.reduce(@cards, [], fn x, acc -> acc ++ Enum.map(1..4, fn _ -> x end) end)
     |> Enum.shuffle()
   end
 
