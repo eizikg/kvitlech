@@ -114,7 +114,7 @@ defmodule KurtenWeb.RoundLive do
             <span class="text-blue-800 font-bold	"><%= player_name(assigns.turn.player, assigns.viewing_self) %></span>
         </div>
         <div class="flex-col justify-center relative align-center h-full w-full">
-          <%= if (assigns.viewing_self) or (assigns.turn.state in [:lost, :won]) or (assigns.turn.player.type == "admin" and assigns.turn.state != :pending) do %>
+          <%= if (assigns.viewing_self) or (assigns.turn.state in [:lost, :won]) or (assigns.turn.player.type == "admin") do %>
               <.revealed_cards viewing_self={assigns.viewing_self} turn={assigns.turn} selected_card_index={assigns.selected_card_index}/>
            <% else %>
               <.hidden_cards turn={assigns.turn}/>
@@ -172,10 +172,17 @@ defmodule KurtenWeb.RoundLive do
   def revealed_cards(assigns) do
     cards = Enum.with_index(assigns.turn.cards)
     ~H"""
-      <div class="max-w-full">
-        <.card card={Enum.at(cards, assigns.selected_card_index)}/>
-      </div>
-      <.card_list cards={cards} selected_card_index={assigns.selected_card_index} />
+      <%= if assigns.turn.player.type == "admin" and not assigns.viewing_self and assigns.turn.state == :pending do %>
+         <div class="max-w-full">
+            <.blank_card card={Enum.at(cards, 0)}/>
+          </div>
+          <.card_list cards={Enum.slice(cards, 1..length(cards))} selected_card_index={assigns.selected_card_index} />
+      <% else %>
+        <div class="max-w-full">
+          <.card card={Enum.at(cards, assigns.selected_card_index)}/>
+        </div>
+        <.card_list cards={cards} selected_card_index={assigns.selected_card_index} />
+      <% end %>
     """
   end
 

@@ -833,8 +833,8 @@ video {
   width: 5rem;
 }
 
-.w-4\/5 {
-  width: 80%;
+.w-3\/5 {
+  width: 60%;
 }
 
 .w-12 {
@@ -853,16 +853,6 @@ video {
   width: 100vw;
 }
 
-.w-3\/5 {
-  width: 60%;
-}
-
-.w-min {
-  width: -webkit-min-content;
-  width: -moz-min-content;
-  width: min-content;
-}
-
 .max-w-full {
   max-width: 100%;
 }
@@ -873,14 +863,6 @@ video {
 
 .flex-1 {
   flex: 1 1 0%;
-}
-
-.flex-initial {
-  flex: 0 1 auto;
-}
-
-.flex-auto {
-  flex: 1 1 auto;
 }
 
 @-webkit-keyframes pulse {
@@ -946,32 +928,12 @@ video {
   margin-bottom: calc(2.5rem * var(--tw-space-y-reverse));
 }
 
-.-space-x-80 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-x-reverse: 0;
-  margin-right: calc(-20rem * var(--tw-space-x-reverse));
-  margin-left: calc(-20rem * calc(1 - var(--tw-space-x-reverse)));
-}
-
-.-space-x-96 > :not([hidden]) ~ :not([hidden]) {
-  --tw-space-x-reverse: 0;
-  margin-right: calc(-24rem * var(--tw-space-x-reverse));
-  margin-left: calc(-24rem * calc(1 - var(--tw-space-x-reverse)));
-}
-
-.overflow-auto {
-  overflow: auto;
-}
-
 .overflow-hidden {
   overflow: hidden;
 }
 
 .overflow-scroll {
   overflow: scroll;
-}
-
-.overflow-clip {
-  text-overflow: clip;
 }
 
 .rounded-full {

@@ -6,7 +6,7 @@ defmodule Kurten.Round do
   alias Phoenix.PubSub
 #
 
-  defstruct [:current_player, :round_id, :room_id, :deck, turns: []]
+  defstruct [:current_player, :round_id, :room_id, :deck, turns: [], balances: []]
 
   # round should close itself if inactive for an hour
 
@@ -125,6 +125,7 @@ defmodule Kurten.Round do
     end)
   end
 
+#  turns -> %{turns, balances}
   def calculate_end_state(turns) do
     %{admin: admin_turn, players: player_turns} = Enum.reduce(turns, %{players: []}, fn turn, acc ->
       if turn.player.type == "admin" do
@@ -134,9 +135,12 @@ defmodule Kurten.Round do
       end
     end)
     {player_turns, admin_balance} = Enum.map_reduce(player_turns, 0, fn turn, admin_balance ->
+       state = case turn.state do
+         :standby -> if player_won?(admin_turn, turn), do: :won, else: :lost
+         state -> state
+       end
+       turn = Map.put(turn, :state, state)
       case turn.state do
-        :standby -> state = if player_won?(admin_turn, turn), do: :won, else: :lost
-               {Map.put(turn, :state, state), admin_balance - turn.bet}
         :won -> {turn, admin_balance - turn.bet}
         :lost -> {turn, admin_balance + turn.bet}
         _ -> {turn, admin_balance}
@@ -144,6 +148,7 @@ defmodule Kurten.Round do
     end)
     admin_turn = Map.put(admin_turn, :bet, admin_balance)
     [admin_turn | player_turns]
+
   end
 
   defp player_won?(admin_turn, player_turn) do
