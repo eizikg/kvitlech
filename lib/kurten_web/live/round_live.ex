@@ -204,7 +204,7 @@ defmodule KurtenWeb.RoundLive do
   def blank_card(assigns) do
     ~H"""
     <div class="p-3 flex justify-center">
-        <img class="filter drop-shadow-xl h-auto w-4/5" src={Routes.static_path(KurtenWeb.Endpoint, "/images/blank.png")} class="w-auto"/>
+        <img class="filter drop-shadow-xl h-auto w-3/5" src={Routes.static_path(KurtenWeb.Endpoint, "/images/blank.png")} class="w-auto"/>
     </div>
     """
   end
@@ -269,7 +269,7 @@ defmodule KurtenWeb.RoundLive do
     {card, _} = assigns.card
       ~H"""
       <div class="p-3 flex justify-center">
-          <img class="filter drop-shadow-xl h-auto w-4/5" src={Routes.static_path(KurtenWeb.Endpoint, "/images/#{card.name}.png")} class="w-auto"/>
+          <img class="filter drop-shadow-xl h-auto w-3/5" src={Routes.static_path(KurtenWeb.Endpoint, "/images/#{card.name}.png")} class="w-auto"/>
       </div>
       """
   end
