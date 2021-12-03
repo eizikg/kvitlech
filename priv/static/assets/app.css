@@ -865,6 +865,14 @@ video {
   flex: 1 1 0%;
 }
 
+.flex-initial {
+  flex: 0 1 auto;
+}
+
+.flex-auto {
+  flex: 1 1 auto;
+}
+
 @-webkit-keyframes pulse {
   50% {
     opacity: .5;
@@ -928,12 +936,20 @@ video {
   margin-bottom: calc(2.5rem * var(--tw-space-y-reverse));
 }
 
+.overflow-auto {
+  overflow: auto;
+}
+
 .overflow-hidden {
   overflow: hidden;
 }
 
 .overflow-scroll {
   overflow: scroll;
+}
+
+.overflow-clip {
+  text-overflow: clip;
 }
 
 .rounded-full {
