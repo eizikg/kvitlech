@@ -157,7 +157,7 @@ defmodule KurtenWeb.RoundLive do
         </div>
         <%= if assigns.player.type == "admin" and assigns.turn.player.id != assigns.player.id and assigns.turn.state == :pending do %>
            <div class="flex justify-center">
-              <button class="btn-blue" phx-click="skip">Skip</button>
+              <button class="btn-blue" phx-click="skip">Skip <%= assigns.turn.player.first_name %></button>
            </div>
         <% end %>
         <div class="flex -space-x-1 overflow-hidden my-1 p-2 justify-center">

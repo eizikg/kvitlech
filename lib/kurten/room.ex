@@ -35,6 +35,19 @@ defmodule Kurten.Room do
     Process.exit(self(), :normal)
   end
 
+  def handle_cast({:switch_admin, player_id}, state) do
+    players = Enum.map(state.players, fn player ->
+      cond do
+        player.id == player_id -> Map.put(player, :type, "admin")
+        player.type == "admin" -> Map.put(player, :type, "player")
+        true -> player
+      end
+    end)
+    state = Map.put(state, :players, players)
+    broadcast(state)
+    {:noreply, state}
+  end
+
   def handle_call({:join, player}, _from, state) do
     players = [player | state.players]
     state = Map.put(state, :players, players)
@@ -44,6 +57,13 @@ defmodule Kurten.Room do
 
   def handle_call(:room, _from, state) do
     {:reply, state, state}
+  end
+
+  def handle_call({:leave, player_id}, _from, state) do
+    players = Enum.filter(state.players, fn player -> player.id != player_id end)
+    state = Map.put(state, :players, players)
+    broadcast(state)
+    {:reply, :ok, state}
   end
 
   def broadcast(state) do
@@ -97,6 +117,14 @@ defmodule Kurten.Room do
     catch
       :exit, _ -> {:error, :not_found}
     end
+  end
+
+  def switch_admin(room_id, player_id) do
+    GenServer.cast({:via, Registry, {Kurten.RoomRegistry, room_id}}, {:switch_admin, player_id})
+  end
+
+  def leave(room_id, player_id) do
+    GenServer.call({:via, Registry, {Kurten.RoomRegistry, room_id}}, {:leave, player_id})
   end
 
   defp get_admin(room) do

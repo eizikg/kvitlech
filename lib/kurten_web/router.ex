@@ -16,7 +16,7 @@ defmodule KurtenWeb.Router do
   end
 
   scope "/", KurtenWeb do
-    pipe_through :browser
+    pipe_through [:browser, :redirect_if_authenticated]
 #   redirect if authorized
     get "/", HomeController, :index
     get "/join/:room_id", PlayerController, :new

@@ -30,6 +30,16 @@ defmodule KurtenWeb.RoomLive do
     {:noreply, push_redirect(socket, to: "/round")}
   end
 
+  def handle_event("set_admin", %{"player_id" => player_id}, socket) do
+    Room.switch_admin(socket.assigns.room.room_id, player_id)
+    {:noreply, socket}
+  end
+
+  def handle_event("leave_room", _params, socket) do
+    Room.leave(socket.assigns.room.room_id, socket.assigns.player.id)
+    {:noreply, push_redirect(socket, to: "/")}
+  end
+
   @impl true
   def handle_info(:round_started, socket) do
     {:noreply, push_redirect(socket, to: "/round")}
@@ -54,7 +64,7 @@ defmodule KurtenWeb.RoomLive do
 
        <div class="flex flex-wrap w-full overflow-scroll">
          <%= for player <- @room.players  do %>
-             <.avatar player={player} balances={@room.balances} current_player={@player} />
+             <.avatar player={player} balance={get_balance(@player, @room.balances)} current_player={@player} />
           <% end %>
        </div>
        <div x-data class="flex-col mt-auto justify-center w-full border-t-1 border-gray-500">
@@ -83,13 +93,17 @@ defmodule KurtenWeb.RoomLive do
             </div>
           </div>
       </div>
-
+      <div class="flex flex-col space-y-1">
        <%= if not is_nil(@room.round_id) do %>
        <button class="btn-blue" phx-click="join_round">View round in progress</button>
        <%end%>
        <%= if @player.type == "admin" and length(@room.players) > 1 and is_nil(@room.round_id) do%>
           <button class="btn-blue" phx-click="start_round">Start Round</button>
         <% end %>
+        <%= if @player.type != "admin" do%>
+              <button class="border border-1 border-red-600 bg-white hover:text-white hover:bg-red-600 rounded text-red-600" phx-click="leave_room">Leave Game</button>
+        <% end %>
+     </div>
     </div>
   </div>
 """
@@ -103,15 +117,18 @@ defmodule KurtenWeb.RoomLive do
     "#{player.first_name} #{player.last_name} is inviting you to to join kvitlech game. #{url(room_id)}"
   end
 
-  def avatar(assigns) do
-    user_balances = Enum.filter(assigns.balances, fn balance -> balance.payee == assigns.player.id or balance.payer == assigns.player.id end)
+  defp get_balance(player, balances) do
+    user_balances = Enum.filter(balances, fn balance -> balance.payee == player.id or balance.payer == player.id end)
     balance = Enum.reduce(user_balances, 0, fn balance, acc ->
-      if balance.payee == assigns.player.id do
+      if balance.payee == player.id do
         acc + balance.amount
-        else
+      else
         acc - balance.amount
       end
     end)
+  end
+
+  def avatar(assigns) do
     ~H"""
       <div class="flex justify-center align-center w-1/3">
               <div class="flex flex-col justify-center items-center align-center m-1 w-auto p-2">
@@ -138,8 +155,15 @@ defmodule KurtenWeb.RoomLive do
                 <% end %>
                 </div>
                 <div class="text-center">
-                <span class={"#{if balance >= 0, do: "text-green-500", else: "text-red-500"}"}>$<%= balance %></span>
+                <span class={"#{if @balance >= 0, do: "text-green-500", else: "text-red-500"}"}>$<%= @balance %></span>
                 </div>
+                <%= if assigns.current_player.type == "admin" and assigns.player.type != "admin" do %>
+                <div class="text-center">
+                 <button phx-click="set_admin" phx-value-player_id={assigns.player.id} class="text-red-500 background-transparent uppercase px-3 py-1 text-xs  mr-1 mb-1 " type="button">
+                   set <%= assigns.player.first_name %> as bank
+                  </button>
+                </div>
+                <% end %>
               </div>
             </div>
     """
