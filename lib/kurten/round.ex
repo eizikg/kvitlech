@@ -172,13 +172,17 @@ defmodule Kurten.Round do
   end
 
 #  callbacks
-  def get_info(round_id) do
+  def get_info(round_id) when is_binary(round_id) do
     try do
       round = GenServer.call(via_tuple(round_id), :round)
       {:ok, round}
       rescue
        _e -> {:error, :not_found}
     end
+  end
+
+  def get_info(_) do
+    {:error, :not_found}
   end
 
   def place_bet(round_id, turn, amount) do
