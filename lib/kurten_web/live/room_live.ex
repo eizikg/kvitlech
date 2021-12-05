@@ -82,7 +82,7 @@ defmodule KurtenWeb.RoomLive do
               <span class="p-2 text-sm text-gray-600">Share on Whatsapp</span>
             </div>
             <div x-data class="flex flex-col m-4 items-center text-center w-1/2">
-              <div @click={"copied = true; $clipboard('#{url(@room.room_id)}')"} class="flex w-max justify-center border border-1 rounded-full p-4 hover:bg-gray-100">
+              <div @click={"copied = true; navigator.clipboard.writeText('#{url(@room.room_id)}')"} class="flex w-max justify-center border border-1 rounded-full p-4 hover:bg-gray-100">
                 <a id="copy_invite" type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-auto text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
