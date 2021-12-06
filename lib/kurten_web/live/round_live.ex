@@ -109,7 +109,7 @@ defmodule KurtenWeb.RoundLive do
 
   def index(assigns) do
     ~H"""
-     <div x-data x-init={if assigns.current_turn.player.id == assigns.player.id and length(assigns.current_turn.cards) == 1 , do: "window.navigator.vibrate(200);"} class="p-3 flex flex-col h-full font-sans">
+     <div x-data x-init={if assigns.current_turn.player.id == assigns.player.id and length(assigns.current_turn.cards) == 1 , do: "window.navigator.vibrate(600);"} class="p-3 flex flex-col h-full font-sans">
         <div class="text-center">
             <span class="text-blue-800 font-bold	"><%= player_name(assigns.turn.player, assigns.viewing_self) %></span>
         </div>
