@@ -64,7 +64,7 @@ defmodule KurtenWeb.RoomLive do
 
        <div class="flex flex-wrap w-full overflow-scroll">
          <%= for player <- @room.players  do %>
-             <.avatar player={player} balance={get_balance(@player, @room.balances)} current_player={@player} />
+             <.avatar player={player} balance={get_balance(player, @room.balances)} current_player={@player} />
           <% end %>
        </div>
        <div x-data class="flex-col mt-auto justify-center w-full border-t-1 border-gray-500">
